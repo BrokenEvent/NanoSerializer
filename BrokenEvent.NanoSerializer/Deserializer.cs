@@ -48,7 +48,9 @@ namespace BrokenEvent.NanoSerializer
     private Dictionary<string, object> constructorArgs = new Dictionary<string, object>();
     private int maxObjId = 0;
     private OptimizationFlags flags;
+
     private TypeResolverDelegate typeResolverDelegate = DefaultTypeResolver;
+    private Dictionary<string, Type> typeResolverCache = new Dictionary<string, Type>();
 
     /// <summary>
     /// Gets the dictinary of default constructor args. This values are used when <see cref="NanoArgAttribute"/> is set to constructor arg.
@@ -67,25 +69,22 @@ namespace BrokenEvent.NanoSerializer
       set { typeResolverDelegate = value; }
     }
 
-    private class CacheObjectLink
+    private Type InternalResolveTypes(string typeName)
     {
-      public CacheObjectLink(int objId)
-      {
-        ObjId = objId;
-      }
+      Type result;
+      if (typeResolverCache.TryGetValue(typeName, out result))
+        return result;
 
-      public int ObjId { get; private set; }
+      result = typeResolverDelegate(typeName);
+      if (result != null)
+        typeResolverCache.Add(typeName, result);
+
+      return result;
     }
 
     private static Type DefaultTypeResolver(string name)
     {
       return Type.GetType(name);
-    }
-
-    private object ResolveObjectLink(object obj)
-    {
-      CacheObjectLink link = obj as CacheObjectLink;
-      return link == null ? obj : objectCache[link.ObjId];
     }
 
     private float TestConstructor(ConstructorInfo info, Dictionary<int, Tuple<object, Type>> args)
@@ -192,15 +191,14 @@ namespace BrokenEvent.NanoSerializer
         if (objIdStr != null)
         {
           objId = int.Parse(objIdStr);
-          object obj;
-          return objectCache.TryGetValue(objId, out obj) ? obj : new CacheObjectLink(objId);
+          return objectCache[objId];
         }
       }
 
       string typeName = data.GetAttribute(ATTRIBUTE_TYPE, true);
       if (typeName != null)
       {
-        type = typeResolverDelegate(typeName);
+        type = InternalResolveTypes(typeName);
         if (type == null)
           throw new SerializationException($"Unable to find type {typeName}");
       }
@@ -216,13 +214,6 @@ namespace BrokenEvent.NanoSerializer
       }
 
       Dictionary<int, Tuple<object, Type>> constructorArgs = null;
-
-      // reserve space in cache for this object
-      if ((flags & OptimizationFlags.NoReferences) == 0)
-      {
-        objId = maxObjId++;
-        objectCache.Add(objId, new CacheObjectLink(objId));
-      }
 
       // read properties required for object creation
       foreach (PropertyInfo info in type.GetProperties())
@@ -267,7 +258,7 @@ namespace BrokenEvent.NanoSerializer
       // create object
       target = CreateObject(type, constructorArgs);
       if ((flags & OptimizationFlags.NoReferences) == 0)
-        objectCache[objId] = target;
+        objectCache[maxObjId++] = target;
 
       FillObject(type, target, data);
 
@@ -386,7 +377,7 @@ namespace BrokenEvent.NanoSerializer
       }
     }
 
-    private object DeserializeContainer(ref object container, Type type, Type elementType, IDataAdapter data, string addMethodName, bool reverse = false)
+    private void DeserializeContainer(ref object container, Type type, Type elementType, IDataAdapter data, string addMethodName, bool reverse = false)
     {
       if (container == null)
         container = Activator.CreateInstance(type);
@@ -405,8 +396,6 @@ namespace BrokenEvent.NanoSerializer
           argsCache[0] = DeserializeObject(elementType, element, null);
           addMethod.Invoke(container, argsCache);
         }
-
-      return container;
     }
 
     private void DeserializeArrayRank(Array array, Type elementType, int[] coords, int r, IDataAdapter data)
