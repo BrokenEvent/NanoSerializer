@@ -41,7 +41,7 @@ namespace BrokenEvent.NanoSerializer
       string flagsStr = data.GetAttribute(ATTRIBUTE_FLAGS, true);
       if (flagsStr != null)
         flags = (OptimizationFlags)int.Parse(flagsStr);
-      return (T)DeserializeObject(typeof(T), data);
+      return (T)DeserializeObject(typeof(T), data, null);
     }
 
     private Dictionary<int, object> objectCache = new Dictionary<int, object>();
@@ -175,8 +175,15 @@ namespace BrokenEvent.NanoSerializer
       return ctor.Invoke(args);
     }
 
-    private object DeserializeObject(Type type, IDataAdapter data)
+    private object DeserializeObject(Type type, IDataAdapter data, object target)
     {
+      if (target != null)
+      {
+        if (!DeserializeContainer(type, data, ref target))
+          FillObject(target.GetType(), target, data);
+        return target;
+      }
+
       int objId = -1;
 
       if ((flags & OptimizationFlags.NoReferences) == 0)
@@ -201,16 +208,13 @@ namespace BrokenEvent.NanoSerializer
       if (IsPrimitive(type))
         return DeserializePrimitive(type, data.Value);
 
-      object result = DeserializeContainer(type, data);
-      if (result != null)
+      if (DeserializeContainer(type, data, ref target))
       {
         if ((flags & OptimizationFlags.NoReferences) == 0)
-          objectCache.Add(maxObjId++, result);
-        return result;
+          objectCache.Add(maxObjId++, target);
+        return target;
       }
 
-      List<Tuple<PropertyInfo, object>> propertyValues = new List<Tuple<PropertyInfo, object>>();
-      List<Tuple<FieldInfo, object>> fieldValues = new List<Tuple<FieldInfo, object>>();
       Dictionary<int, Tuple<object, Type>> constructorArgs = null;
 
       // reserve space in cache for this object
@@ -220,32 +224,15 @@ namespace BrokenEvent.NanoSerializer
         objectCache.Add(objId, new CacheObjectLink(objId));
       }
 
-      // read properties
+      // read properties required for object creation
       foreach (PropertyInfo info in type.GetProperties())
       {
-        if (!info.CanRead)
-          continue;
-
-        NanoState state = NanoState.Serialize;
-        int constructorArg = -1;
-
         NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
-        if (attr != null)
-        {
-          state = attr.State;
-          constructorArg = attr.ConstructorArg;
-        }
-
-        if (state == NanoState.Ignore)
-          continue;
-
-        if (!info.CanWrite && constructorArg == -1)
+        if (attr == null || attr.ConstructorArg == -1)
           continue;
 
         bool isPrimitive = IsPrimitive(info.PropertyType);
-        NanoLocation location = NanoLocation.Auto;
-        if (attr != null)
-          location = attr.Location;
+        NanoLocation location = attr.Location;
 
         if (location == NanoLocation.Auto)
           location = isPrimitive ? NanoLocation.Attribute : NanoLocation.SubNode;
@@ -269,34 +256,98 @@ namespace BrokenEvent.NanoSerializer
         {
           IDataAdapter subnode = data.GetChild(info.Name);
           if (subnode != null)
-            value = DeserializeObject(info.PropertyType, subnode);
+            value = DeserializeObject(info.PropertyType, subnode, null);
         }
 
-        if (constructorArg != -1)
-        {
-          if (constructorArgs == null)
-            constructorArgs = new Dictionary<int, Tuple<object, Type>>();
-          constructorArgs.Add(constructorArg, new Tuple<object, Type>(value, info.PropertyType));
+        if (constructorArgs == null)
+          constructorArgs = new Dictionary<int, Tuple<object, Type>>();
+        constructorArgs.Add(attr.ConstructorArg, new Tuple<object, Type>(value, info.PropertyType));
+      }
 
-          if (state == NanoState.SerializeSet)
-            propertyValues.Add(new Tuple<PropertyInfo, object>(info, value));
+      // create object
+      target = CreateObject(type, constructorArgs);
+      if ((flags & OptimizationFlags.NoReferences) == 0)
+        objectCache[objId] = target;
+
+      FillObject(type, target, data);
+
+      return target;
+    }
+
+    private void FillObject(Type type, object target, IDataAdapter data)
+    {
+      // read common properties
+      foreach (PropertyInfo info in type.GetProperties())
+      {
+        // can't be read, so can't be serialized
+        if (!info.CanRead)
+          continue;
+
+        NanoState state = NanoState.Serialize;
+
+        NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
+
+        if (attr != null)
+        {
+          if (attr.ConstructorArg != -1 && state != NanoState.SerializeSet)
+            continue;
+
+          state = attr.State;
+        }
+
+        if (state == NanoState.Ignore)
+          continue;
+
+        bool isPrimitive = IsPrimitive(info.PropertyType);
+        NanoLocation location = NanoLocation.Auto;
+        if (attr != null)
+          location = attr.Location;
+
+        if (location == NanoLocation.Auto)
+          location = isPrimitive ? NanoLocation.Attribute : NanoLocation.SubNode;
+
+        object value = null;
+        if (isPrimitive)
+        {
+          if (!info.CanWrite)
+            continue;
+
+          string stringValue;
+          if (location == NanoLocation.Attribute)
+            stringValue = data.GetAttribute(info.Name, false);
+          else
+          {
+            IDataAdapter e = data.GetChild(info.Name);
+            stringValue = e?.Value;
+          }
+
+          if (stringValue != null)
+            value = DeserializePrimitive(info.PropertyType, stringValue);
+
+          info.SetValue(target, value);
         }
         else
-          propertyValues.Add(new Tuple<PropertyInfo, object>(info, value));
+        {
+          IDataAdapter subnode = data.GetChild(info.Name);
+          if (subnode != null)
+          {
+            object currentValue = info.GetValue(target);
+            if (currentValue == null)
+              info.SetValue(target, DeserializeObject(info.PropertyType, subnode, null));
+            else
+              DeserializeObject(info.PropertyType, subnode, currentValue);
+          }
+        }
       }
-      
+
       // read fields
       foreach (FieldInfo info in type.GetFields())
       {
         NanoState state = NanoState.Serialize;
-        int constructorArg = -1;
 
         NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
         if (attr != null)
-        {
           state = attr.State;
-          constructorArg = attr.ConstructorArg;
-        }
 
         if (state == NanoState.Ignore || info.IsNotSerialized)
           continue;
@@ -328,54 +379,30 @@ namespace BrokenEvent.NanoSerializer
         {
           IDataAdapter subnode = data.GetChild(info.Name);
           if (subnode != null)
-            value = DeserializeObject(info.FieldType, subnode);
+            value = DeserializeObject(info.FieldType, subnode, null);
         }
 
-        if (constructorArg != -1)
-        {
-          if (constructorArgs == null)
-            constructorArgs = new Dictionary<int, Tuple<object, Type>>();
-          constructorArgs.Add(constructorArg, new Tuple<object, Type>(value, info.FieldType));
-
-          if (state == NanoState.SerializeSet)
-            fieldValues.Add(new Tuple<FieldInfo, object>(info, value));
-        }
-        else
-          fieldValues.Add(new Tuple<FieldInfo, object>(info, value));
+        info.SetValue(target, value);
       }
-
-      // create object
-      result = CreateObject(type, constructorArgs);
-      if ((flags & OptimizationFlags.NoReferences) == 0)
-        objectCache[objId] = result;
-
-      // set properties
-      foreach (Tuple<PropertyInfo, object> value in propertyValues)
-        value.Value1.SetValue(result, ResolveObjectLink(value.Value2));
-
-      // set fields
-      foreach (Tuple<FieldInfo, object> value in fieldValues)
-        value.Value1.SetValue(result, ResolveObjectLink(value.Value2));
-
-      return result;
     }
 
-    private object DeserializeContainer(Type type, Type elementType, IDataAdapter data, string addMethodName, bool reverse = false)
+    private object DeserializeContainer(ref object container, Type type, Type elementType, IDataAdapter data, string addMethodName, bool reverse = false)
     {
-      object container = Activator.CreateInstance(type);
+      if (container == null)
+        container = Activator.CreateInstance(type);
       MethodInfo addMethod = type.GetMethod(addMethodName, new []{elementType});
       object[] argsCache = new object[1];
 
       if (reverse)
         foreach (IDataAdapter element in data.GetChildrenReversed())
         {
-          argsCache[0] = DeserializeObject(elementType, element);
+          argsCache[0] = DeserializeObject(elementType, element, null);
           addMethod.Invoke(container, argsCache);
         }
       else
         foreach (IDataAdapter element in data.GetChildren())
         {
-          argsCache[0] = DeserializeObject(elementType, element);
+          argsCache[0] = DeserializeObject(elementType, element, null);
           addMethod.Invoke(container, argsCache);
         }
 
@@ -390,7 +417,7 @@ namespace BrokenEvent.NanoSerializer
         foreach (IDataAdapter element in data.GetChildren())
         {
           coords[r] = index++;
-          array.SetValue(DeserializeObject(elementType, element), coords);
+          array.SetValue(DeserializeObject(elementType, element, null), coords);
         }
       }
       else
@@ -421,43 +448,69 @@ namespace BrokenEvent.NanoSerializer
         ScanArrayRanks(firstChild, lengths, index + 1);
     }
 
-    private object DeserializeContainer(Type type, IDataAdapter data)
+    private bool DeserializeContainer(Type type, IDataAdapter data, ref object target)
     {
       if ((flags & OptimizationFlags.NoContainers) != 0)
-        return null;
+        return false;
+
+      if (target != null)
+        type = target.GetType();
 
       if (type.IsArray)
       {
         Type elementType = type.GetElementType();
         int[] lengths = new int[int.Parse(data.GetAttribute(ATTRIBUTE_ARRAY_RANK, true))];
         ScanArrayRanks(data, lengths, 0);
-        Array array = Array.CreateInstance(elementType, lengths);
+
+        Array array;
+        if (target == null)
+          target = array = Array.CreateInstance(elementType, lengths);
+        else
+          array = (Array)target;
+
         int[] coords = new int[array.Rank];
         DeserializeArrayRank(array, elementType, coords, 0, data);
 
-        return array;
+        return true;
       }
 
       if (type.IsGenericType)
       {
-        if (HaveInterface(type, typeof(IList)))
-          return DeserializeContainer(type, type.GetGenericArguments()[0], data, "Add");
+        if (HaveInterface(type, typeof(IList<>)))
+        {
+          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Add");
+          return true;
+        }
 
         if (type.GetGenericTypeDefinition() == typeof(Queue<>))
-          return DeserializeContainer(type, type.GetGenericArguments()[0], data, "Enqueue");
+        {
+          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Enqueue");
+          return true;
+        }
 
         if (type.GetGenericTypeDefinition() == typeof(Stack<>))
-          return DeserializeContainer(type, type.GetGenericArguments()[0], data, "Push", true);
+        {
+          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Push", true);
+          return true;
+        }
 
         if (HaveInterface(type.GetGenericTypeDefinition(), typeof(ISet<>)))
-          return DeserializeContainer(type, type.GetGenericArguments()[0], data, "Add");
+        {
+          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Add");
+          return true;
+        }
 
         if (type.GetGenericTypeDefinition() == typeof(LinkedList<>))
-          return DeserializeContainer(type, type.GetGenericArguments()[0], data, "AddLast");
+        {
+          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "AddLast");
+          return true;
+        }
 
         if (HaveInterface(type.GetGenericTypeDefinition(), typeof(IDictionary<,>)))
         {
-          object container = Activator.CreateInstance(type);
+          if (target == null)
+            target = Activator.CreateInstance(type);
+
           Type keyType = type.GetGenericArguments()[0];
           Type valueType = type.GetGenericArguments()[1];
           MethodInfo addMethod = type.GetMethod("Add");
@@ -465,27 +518,36 @@ namespace BrokenEvent.NanoSerializer
           object[] argsCache = new object[2];
           foreach (IDataAdapter element in data.GetChildren())
           {
-            argsCache[0] = DeserializeObject(keyType, element.GetChild("Key"));
-            argsCache[1] = DeserializeObject(valueType, element.GetChild("Value"));
-            addMethod.Invoke(container, argsCache);
+            argsCache[0] = DeserializeObject(keyType, element.GetChild("Key"), null);
+            argsCache[1] = DeserializeObject(valueType, element.GetChild("Value"), null);
+            addMethod.Invoke(target, argsCache);
           }
 
-          return container;
+          return true;
         }
       }
       else
       {
         if (HaveInterface(type, typeof(IList)))
-          return DeserializeContainer(type, typeof(object), data, "Add");
+        {
+          DeserializeContainer(ref target, type, typeof(object), data, "Add");
+          return true;
+        }
 
         if (type == typeof(Queue))
-          return DeserializeContainer(type, typeof(object), data, "Enqueue");
+        {
+          DeserializeContainer(ref target, type, typeof(object), data, "Enqueue");
+          return true;
+        }
 
         if (type == typeof(Stack))
-          return DeserializeContainer(type, typeof(object), data, "Push", true);
+        {
+          DeserializeContainer(ref target, type, typeof(object), data, "Push", true);
+          return true;
+        }
       }
 
-      return null;
+      return false;
     }
   }
 }

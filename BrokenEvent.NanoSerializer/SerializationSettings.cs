@@ -15,6 +15,7 @@
       DictionaryKeyName = "Key";
       DictionaryValueName = "Value";
       ArrayItemName = "A";
+      AssemblyQualifiedNames = true;
     }
 
     /// <summary>
@@ -50,8 +51,14 @@
     public string DictionaryKeyName { get; set; }
 
     /// <summary>
-    /// Gets or sets the ndoe name for dictionary values. Default is "Value".
+    /// Gets or sets the node name for dictionary values. Default is "Value".
     /// </summary>
     public string DictionaryValueName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value indicating whether to use assembly qualified names for all types which are not from mscorlib.
+    /// If set to false, namespace qualified names will be used.
+    /// </summary>
+    public bool AssemblyQualifiedNames { get; set; }
   }
 }

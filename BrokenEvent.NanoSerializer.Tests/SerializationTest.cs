@@ -39,6 +39,10 @@ namespace BrokenEvent.NanoSerializer.Tests
       public int A;
       public string B { get; set; }
       public NanoState C { get; set; }
+
+      public string D { get { return "!!!"; } }
+
+      public static int E = 999;
     }
 
     [Test]
@@ -55,6 +59,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
       Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(4, target.DocumentElement.Attributes.Count);
       Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
       Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
       Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
@@ -161,7 +166,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
     private class ComplexTestClass: ThreeAttrsTestClass
     {
-      public CustomConstructorTestClass D { get; set; }
+      public CustomConstructorTestClass F { get; set; }
     }
 
     [Test]
@@ -172,7 +177,7 @@ namespace BrokenEvent.NanoSerializer.Tests
         A = 123,
         B = "testString",
         C = NanoState.Ignore,
-        D = new CustomConstructorTestClass("testString2", NanoState.Serialize, 333)
+        F = new CustomConstructorTestClass("testString2", NanoState.Serialize, 333)
       };
 
       XmlDocument target = new XmlDocument();
@@ -183,22 +188,22 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
       Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
 
-      XmlElement dEl = GetElement(target, "D");
-      Assert.NotNull(dEl);
-      Assert.AreEqual(1, dEl.ChildNodes.Count);
-      Assert.AreEqual(2, dEl.Attributes.Count);
-      Assert.AreEqual("333", GetXmlValue(dEl, "A"));
-      Assert.AreEqual("testString2", dEl.GetAttribute("B"));
-      Assert.AreEqual("Serialize", dEl.GetAttribute("C"));
+      XmlElement fEl = GetElement(target, "F");
+      Assert.NotNull(fEl);
+      Assert.AreEqual(1, fEl.ChildNodes.Count);
+      Assert.AreEqual(2, fEl.Attributes.Count);
+      Assert.AreEqual("333", GetXmlValue(fEl, "A"));
+      Assert.AreEqual("testString2", fEl.GetAttribute("B"));
+      Assert.AreEqual("Serialize", fEl.GetAttribute("C"));
 
       ComplexTestClass b = Deserializer.Deserialize<ComplexTestClass>((SystemXmlAdapter)target);
 
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
-      Assert.AreEqual(a.D.C, b.D.C);
-      Assert.AreEqual(a.D.C, b.D.C);
-      Assert.AreEqual(a.D.C, b.D.C);
+      Assert.AreEqual(a.F.C, b.F.C);
+      Assert.AreEqual(a.F.C, b.F.C);
+      Assert.AreEqual(a.F.C, b.F.C);
     }
 
     [Test]
@@ -396,6 +401,55 @@ namespace BrokenEvent.NanoSerializer.Tests
       public IList<string> Strings;
     }
 
+    [Test]
+    public void List()
+    {
+      IListClass a = new IListClass()
+      {
+        Strings = new List<string> { "test1", "test2" },
+      };
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+
+      IListClass b = Deserializer.Deserialize<IListClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.Strings.Count, b.Strings.Count);
+      for (int i = 0; i < a.Strings.Count; i++)
+        Assert.AreEqual(a.Strings[i], b.Strings[i]);
+    }
+
+    private class ReadOnlyListClass
+    {
+      public ReadOnlyListClass()
+      {
+        Strings = new List<string>();
+      }
+
+      public IList<string> Strings { get; }
+    }
+
+    [Test]
+    public void ReadOnlyList()
+    {
+      ReadOnlyListClass a = new ReadOnlyListClass();
+      a.Strings.Add("test1");
+      a.Strings.Add("test2");
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+
+      ReadOnlyListClass b = Deserializer.Deserialize<ReadOnlyListClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.Strings.Count, b.Strings.Count);
+      for (int i = 0; i < a.Strings.Count; i++)
+        Assert.AreEqual(a.Strings[i], b.Strings[i]);
+    }
+
     private class SquareArrayClass
     {
       public byte[,] Bytes;
@@ -450,26 +504,7 @@ namespace BrokenEvent.NanoSerializer.Tests
         for (int y = 0; y < a.Bytes[x].Length; y++)
           Assert.AreEqual(a.Bytes[x][y], b.Bytes[x][y]);
     }
-
-    [Test]
-    public void List()
-    {
-      IListClass a = new IListClass()
-      {
-        Strings = new List<string> { "test1", "test2" },
-      };
-
-      XmlDocument target = new XmlDocument();
-      Serializer.Serialize((SystemXmlAdapter)target, a);
-
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
-
-      IListClass b = Deserializer.Deserialize<IListClass>((SystemXmlAdapter)target);
-
-      Assert.AreEqual(a.Strings.Count, b.Strings.Count);
-      for (int i = 0; i < a.Strings.Count; i++)
-        Assert.AreEqual(a.Strings[i], b.Strings[i]);
-    }
+ 
 
     private class QueueClass
     {

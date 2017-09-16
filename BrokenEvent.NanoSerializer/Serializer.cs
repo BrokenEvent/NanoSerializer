@@ -107,7 +107,7 @@ namespace BrokenEvent.NanoSerializer
     {
       objectsCache.Add(target, maxObjId++);
 
-      foreach (PropertyInfo info in target.GetType().GetProperties())
+      foreach (PropertyInfo info in target.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
       {
         NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
 
@@ -117,15 +117,18 @@ namespace BrokenEvent.NanoSerializer
         if (!info.CanRead)
           continue;
 
-        if (!settings.SerializeReadOnly && !info.CanWrite && (attr == null || attr.ConstructorArg != -1))
-          continue;
+        bool isReadOnly = !info.CanWrite;
+        if (attr != null && attr.ConstructorArg != -1)
+          isReadOnly = false; // will be used in constructor
+        if (settings.SerializeReadOnly)
+          isReadOnly = false; // always serialize
 
         object value = info.GetValue(target);
         if (value != null)
-          SerializeValue(info.PropertyType, value, data, new Info(info.Name, attr));
+          SerializeValue(info.PropertyType, value, data, new Info(info.Name, attr), isReadOnly);
       }
 
-      foreach (FieldInfo info in target.GetType().GetFields())
+      foreach (FieldInfo info in target.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public))
       {
         NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
 
@@ -137,16 +140,20 @@ namespace BrokenEvent.NanoSerializer
 
         object value = info.GetValue(target);
         if (value != null)
-          SerializeValue(info.FieldType, value, data, new Info(info.Name, attr));
+          SerializeValue(info.FieldType, value, data, new Info(info.Name, attr), false);
       }
     }
 
-    private void SerializeValue(Type type, object value, IDataAdapter data, Info info)
+    private void SerializeValue(Type type, object value, IDataAdapter data, Info info, bool isReadOnly)
     {
       bool isPrimitive = IsPrimitive(type);
 
       if (isPrimitive)
       {
+        // no need to serialize
+        if (isReadOnly)
+          return;
+
         if (info.Location == NanoLocation.SubNode)
           data.AddChild(info.Name).Value = value.ToString();
         else
@@ -171,7 +178,7 @@ namespace BrokenEvent.NanoSerializer
       Type valueType = value.GetType();
       if (valueType != type)
       {
-        string typeName = valueType.Assembly.GetName().Name == "mscorlib" ?
+        string typeName = valueType.Assembly.GetName().Name == "mscorlib" || !settings.AssemblyQualifiedNames ?
           valueType.FullName :
           valueType.AssemblyQualifiedName;
         subNode.AddAttribute(ATTRIBUTE_TYPE, typeName, true);
@@ -194,7 +201,7 @@ namespace BrokenEvent.NanoSerializer
     {
       Info info = new Info(NanoLocation.SubNode, settings.ContainerItemName);
       foreach (object o in e)
-        SerializeValue(elementType, o, data, info);
+        SerializeValue(elementType, o, data, info, false);
 
       haveContainers = true;
     }
@@ -205,7 +212,7 @@ namespace BrokenEvent.NanoSerializer
         for (int i = 0; i < array.GetLength(r); i++)
         {
           coords[r] = i;
-          SerializeValue(elementType, array.GetValue(coords), data, info);
+          SerializeValue(elementType, array.GetValue(coords), data, info, false);
         }
       else
         for (int i = 0; i < array.GetLength(r); i++)
@@ -259,8 +266,8 @@ namespace BrokenEvent.NanoSerializer
           }
 
           IDataAdapter itemEl = data.AddChild(settings.ContainerItemName);
-          SerializeValue(keyType, keyPropertyInfo.GetValue(o), itemEl, keyInfo);
-          SerializeValue(valueType, valuePropertyInfo.GetValue(o), itemEl, valueInfo);
+          SerializeValue(keyType, keyPropertyInfo.GetValue(o), itemEl, keyInfo, false);
+          SerializeValue(valueType, valuePropertyInfo.GetValue(o), itemEl, valueInfo, false);
         }
         haveContainers = true;
 
