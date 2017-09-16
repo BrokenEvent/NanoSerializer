@@ -9,10 +9,10 @@ namespace BrokenEvent.NanoSerializer
   /// </summary>
   public abstract class SerializationBase
   {
-    internal const string ATTRIBUTE_TYPE = "_type";
-    internal const string ATTRIBUTE_OBJID = "_objId";
-    internal const string ATTRIBUTE_FLAGS = "_flags";
-    internal const string ATTRIBUTE_ARRAY_RANK = "_r";
+    public const string ATTRIBUTE_TYPE = "_type";
+    public const string ATTRIBUTE_OBJID = "_objId";
+    public const string ATTRIBUTE_FLAGS = "_flags";
+    public const string ATTRIBUTE_ARRAY_RANK = "_r";
 
     // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/built-in-types-table
     private static Dictionary<Type, Func<string, object>> primitiveTypes = new Dictionary<Type, Func<string, object>>
