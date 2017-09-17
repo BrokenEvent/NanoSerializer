@@ -315,7 +315,7 @@ namespace BrokenEvent.NanoSerializer
           if (stringValue != null)
             value = DeserializePrimitive(info.PropertyType, stringValue);
 
-          info.SetValue(target, value);
+          InvocationHelper.SetProperty(target, type, info, value);
         }
         else
         {
@@ -324,7 +324,7 @@ namespace BrokenEvent.NanoSerializer
           {
             object currentValue = info.GetValue(target);
             if (currentValue == null)
-              info.SetValue(target, DeserializeObject(info.PropertyType, subnode, null));
+              InvocationHelper.SetProperty(target, type, info, DeserializeObject(info.PropertyType, subnode, null));
             else
               DeserializeObject(info.PropertyType, subnode, currentValue);
           }
@@ -381,21 +381,25 @@ namespace BrokenEvent.NanoSerializer
     {
       if (container == null)
         container = Activator.CreateInstance(type);
-      MethodInfo addMethod = type.GetMethod(addMethodName, new []{elementType});
-      object[] argsCache = new object[1];
 
+      Action<object, object> addAction = InvocationHelper.GetSetDelegate(type, elementType, addMethodName);
       if (reverse)
         foreach (IDataAdapter element in data.GetChildrenReversed())
-        {
-          argsCache[0] = DeserializeObject(elementType, element, null);
-          addMethod.Invoke(container, argsCache);
-        }
+          addAction(container, DeserializeObject(elementType, element, null));
       else
         foreach (IDataAdapter element in data.GetChildren())
-        {
-          argsCache[0] = DeserializeObject(elementType, element, null);
-          addMethod.Invoke(container, argsCache);
-        }
+          addAction(container, DeserializeObject(elementType, element, null));
+    }
+
+    private void DeserializeContainer(ref object container, Type type, Type elementType, Type returnType, IDataAdapter data, string addMethodName)
+    {
+      if (container == null)
+        container = Activator.CreateInstance(type);
+      MethodInfo methodInfo = type.GetMethod(addMethodName, new Type[]{elementType});
+
+      Func<object, object, object> addFunc = InvocationHelper.GetGetSetDelegate(type, elementType, returnType, methodInfo);
+      foreach (IDataAdapter element in data.GetChildren())
+        addFunc(container, DeserializeObject(elementType, element, null));
     }
 
     private void DeserializeArrayRank(Array array, Type elementType, int[] coords, int r, IDataAdapter data)
@@ -465,52 +469,54 @@ namespace BrokenEvent.NanoSerializer
 
       if (type.IsGenericType)
       {
+        Type genericType = type.GetGenericTypeDefinition();
+        Type genericArg = type.GetGenericArguments()[0];
+
         if (HaveInterface(type, typeof(IList<>)))
         {
-          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Add");
+          DeserializeContainer(ref target, type, genericArg, data, "Add");
           return true;
         }
 
-        if (type.GetGenericTypeDefinition() == typeof(Queue<>))
+        if (genericType == typeof(Queue<>))
         {
-          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Enqueue");
+          DeserializeContainer(ref target, type, genericArg, data, "Enqueue");
           return true;
         }
 
-        if (type.GetGenericTypeDefinition() == typeof(Stack<>))
+        if (genericType == typeof(Stack<>))
         {
-          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Push", true);
+          DeserializeContainer(ref target, type, genericArg, data, "Push", true);
           return true;
         }
 
-        if (HaveInterface(type.GetGenericTypeDefinition(), typeof(ISet<>)))
+        if (HaveInterface(genericType, typeof(ISet<>)))
         {
-          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "Add");
+          DeserializeContainer(ref target, type, genericArg, typeof(bool), data, "Add");
           return true;
         }
 
-        if (type.GetGenericTypeDefinition() == typeof(LinkedList<>))
+        if (genericType == typeof(LinkedList<>))
         {
-          DeserializeContainer(ref target, type, type.GetGenericArguments()[0], data, "AddLast");
+          Type nodeType = typeof(LinkedListNode<>).MakeGenericType(genericArg);
+          DeserializeContainer(ref target, type, genericArg, nodeType, data, "AddLast");
           return true;
         }
 
-        if (HaveInterface(type.GetGenericTypeDefinition(), typeof(IDictionary<,>)))
+        if (HaveInterface(genericType, typeof(IDictionary<,>)))
         {
           if (target == null)
             target = Activator.CreateInstance(type);
 
-          Type keyType = type.GetGenericArguments()[0];
           Type valueType = type.GetGenericArguments()[1];
-          MethodInfo addMethod = type.GetMethod("Add");
 
-          object[] argsCache = new object[2];
+          Action<object, object, object> setAction = InvocationHelper.GetSetDelegate(type, genericArg, valueType, "Add");
           foreach (IDataAdapter element in data.GetChildren())
-          {
-            argsCache[0] = DeserializeObject(keyType, element.GetChild("Key"), null);
-            argsCache[1] = DeserializeObject(valueType, element.GetChild("Value"), null);
-            addMethod.Invoke(target, argsCache);
-          }
+            setAction(
+                target,
+                DeserializeObject(genericArg, element.GetChild("Key"), null),
+                DeserializeObject(valueType, element.GetChild("Value"), null)
+              );
 
           return true;
         }

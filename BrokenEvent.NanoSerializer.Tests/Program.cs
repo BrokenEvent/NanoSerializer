@@ -19,6 +19,9 @@ namespace BrokenEvent.NanoSerializer.Tests
     [XmlInclude(typeof(ModelSubclass))]
     static void Main()
     {
+      Console.WriteLine("Performance test...");
+      PerfTest.TestPerformance();
+
       Console.WriteLine("Warming up JIT: Model...");
       ModelClass target = ModelClass.BuildObjectsModel(5, 3);
       ModelClass result;
@@ -68,7 +71,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Deserializer.Deserialize<ModelSubclass>((SystemXmlAdapter)xml);
 
       ModelClass.ObjectsCount = 0;
-      Console.Write("Building model...");
+      Console.Write("Building model... ");
       target = ModelClass.BuildObjectsModel(13, 5);
       Console.WriteLine($"{ModelClass.ObjectsCount} objects built.");
 

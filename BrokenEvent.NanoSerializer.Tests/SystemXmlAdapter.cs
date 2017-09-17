@@ -59,12 +59,12 @@ namespace BrokenEvent.NanoSerializer.Tests
           yield return new SystemXmlAdapter((XmlElement)element.ChildNodes[i]);
     }
 
-    public static explicit operator SystemXmlAdapter(XmlElement e)
+    public static implicit operator SystemXmlAdapter(XmlElement e)
     {
       return new SystemXmlAdapter(e);
     }
 
-    public static explicit operator SystemXmlAdapter(XmlDocument e)
+    public static implicit operator SystemXmlAdapter(XmlDocument e)
     {
       if (e.DocumentElement == null)
         e.AppendChild(e.CreateElement("test"));

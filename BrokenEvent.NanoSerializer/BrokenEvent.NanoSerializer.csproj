@@ -38,10 +38,12 @@
   <ItemGroup>
     <Compile Include="Deserializer.cs" />
     <Compile Include="IDataAdapter.cs" />
+    <Compile Include="InvocationHelper.cs" />
     <Compile Include="NanoArgAttribute.cs" />
     <Compile Include="NanoLocation.cs" />
     <Compile Include="NanoSerializationAttribute.cs" />
     <Compile Include="NanoState.cs" />
+    <Compile Include="PerfTest.cs" />
     <Compile Include="SerializationBase.cs" />
     <Compile Include="SerializationSettings.cs" />
     <Compile Include="Serializer.cs" />

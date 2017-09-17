@@ -123,7 +123,7 @@ namespace BrokenEvent.NanoSerializer
         if (settings.SerializeReadOnly)
           isReadOnly = false; // always serialize
 
-        object value = info.GetValue(target);
+        object value = InvocationHelper.GetProperty(target, target.GetType(), info);
         if (value != null)
           SerializeValue(info.PropertyType, value, data, new Info(info.Name, attr), isReadOnly);
       }
@@ -254,20 +254,22 @@ namespace BrokenEvent.NanoSerializer
         Type keyType = type.GetGenericArguments()[0];
         Type valueType = type.GetGenericArguments()[1];
 
-        PropertyInfo keyPropertyInfo = null;
-        PropertyInfo valuePropertyInfo = null;
+        Func<object, object> getKeyFunc = null;
+        Func<object, object> getValueFunc = null;
 
         foreach (object o in (IEnumerable)value)
         {
-          if (keyPropertyInfo == null)
+          if (getKeyFunc == null)
           {
-            keyPropertyInfo = o.GetType().GetProperty(settings.DictionaryKeyName);
-            valuePropertyInfo = o.GetType().GetProperty(settings.DictionaryValueName);
+            PropertyInfo keyPropertyInfo = o.GetType().GetProperty("Key");
+            PropertyInfo valuePropertyInfo = o.GetType().GetProperty("Value");
+            getKeyFunc = InvocationHelper.GetGetDelegate(o.GetType(), keyType, keyPropertyInfo);
+            getValueFunc = InvocationHelper.GetGetDelegate(o.GetType(), valueType, valuePropertyInfo);
           }
 
           IDataAdapter itemEl = data.AddChild(settings.ContainerItemName);
-          SerializeValue(keyType, keyPropertyInfo.GetValue(o), itemEl, keyInfo, false);
-          SerializeValue(valueType, valuePropertyInfo.GetValue(o), itemEl, valueInfo, false);
+          SerializeValue(keyType, getKeyFunc(o), itemEl, keyInfo, false);
+          SerializeValue(valueType, getValueFunc(o), itemEl, valueInfo, false);
         }
         haveContainers = true;
 
