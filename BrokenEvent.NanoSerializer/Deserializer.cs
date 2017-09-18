@@ -259,46 +259,6 @@ namespace BrokenEvent.NanoSerializer
         constructorArgs.Add(property.ConstructorArg, new Tuple<object, Type>(value, property.MemberType));
       }
 
-      /*// read properties required for object creation
-      foreach (PropertyInfo info in type.GetProperties())
-      {
-        NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
-        if (attr == null || attr.ConstructorArg == -1)
-          continue;
-
-        bool isPrimitive = IsPrimitive(info.PropertyType);
-        NanoLocation location = attr.Location;
-
-        if (location == NanoLocation.Auto)
-          location = isPrimitive ? NanoLocation.Attribute : NanoLocation.SubNode;
-
-        object value = null;
-        if (isPrimitive)
-        {
-          string stringValue;
-          if (location == NanoLocation.Attribute)
-            stringValue = data.GetAttribute(info.Name, false);
-          else
-          {
-            IDataAdapter e = data.GetChild(info.Name);
-            stringValue = e?.Value;
-          }
-
-          if (stringValue != null)
-            value = DeserializePrimitive(info.PropertyType, stringValue);
-        }
-        else
-        {
-          IDataAdapter subnode = data.GetChild(info.Name);
-          if (subnode != null)
-            value = DeserializeObject(info.PropertyType, subnode, null);
-        }
-
-        if (constructorArgs == null)
-          constructorArgs = new Dictionary<int, Tuple<object, Type>>();
-        constructorArgs.Add(attr.ConstructorArg, new Tuple<object, Type>(value, info.PropertyType));
-      }*/
-
       // create object
       target = CreateObject(type, constructorArgs);
       if ((flags & OptimizationFlags.NoReferences) == 0)
@@ -311,6 +271,7 @@ namespace BrokenEvent.NanoSerializer
 
     private void FillObject(TypeWrapper wrapper, object target, IDataAdapter data)
     {
+      // read properties
       for (int i = 0; i < wrapper.Properties.Count; i++)
       {
         PropertyWrapper property = wrapper.Properties[i];
@@ -342,70 +303,7 @@ namespace BrokenEvent.NanoSerializer
         }
       }
 
-      /*// read common properties
-      foreach (PropertyInfo info in type.GetProperties())
-      {
-        // can't be read, so can't be serialized
-        if (!info.CanRead)
-          continue;
-
-        NanoState state = NanoState.Serialize;
-
-        NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
-
-        if (attr != null)
-        {
-          if (attr.ConstructorArg != -1 && state != NanoState.SerializeSet)
-            continue;
-
-          state = attr.State;
-        }
-
-        if (state == NanoState.Ignore)
-          continue;
-
-        bool isPrimitive = IsPrimitive(info.PropertyType);
-        NanoLocation location = NanoLocation.Auto;
-        if (attr != null)
-          location = attr.Location;
-
-        if (location == NanoLocation.Auto)
-          location = isPrimitive ? NanoLocation.Attribute : NanoLocation.SubNode;
-
-        object value = null;
-        if (isPrimitive)
-        {
-          if (!info.CanWrite)
-            continue;
-
-          string stringValue;
-          if (location == NanoLocation.Attribute)
-            stringValue = data.GetAttribute(info.Name, false);
-          else
-          {
-            IDataAdapter e = data.GetChild(info.Name);
-            stringValue = e?.Value;
-          }
-
-          if (stringValue != null)
-            value = DeserializePrimitive(info.PropertyType, stringValue);
-
-          InvocationHelper.SetProperty(target, type, info, value);
-        }
-        else
-        {
-          IDataAdapter subnode = data.GetChild(info.Name);
-          if (subnode != null)
-          {
-            object currentValue = info.GetValue(target);
-            if (currentValue == null)
-              InvocationHelper.SetProperty(target, type, info, DeserializeObject(info.PropertyType, subnode, null));
-            else
-              DeserializeObject(info.PropertyType, subnode, currentValue);
-          }
-        }
-      }*/
-
+      // read fields
       for (int i = 0; i < wrapper.Fields.Count; i++)
       {
         FieldWrapper field = wrapper.Fields[i];
@@ -427,51 +325,6 @@ namespace BrokenEvent.NanoSerializer
           }
         }
       }
-
-      /*// read fields
-      foreach (FieldInfo info in type.GetFields())
-      {
-        NanoState state = NanoState.Serialize;
-
-        NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
-        if (attr != null)
-          state = attr.State;
-
-        if (state == NanoState.Ignore || info.IsNotSerialized)
-          continue;
-
-        bool isPrimitive = IsPrimitive(info.FieldType);
-        NanoLocation location = NanoLocation.Auto;
-        if (attr != null)
-          location = attr.Location;
-
-        if (location == NanoLocation.Auto)
-          location = isPrimitive ? NanoLocation.Attribute : NanoLocation.SubNode;
-
-        object value = null;
-        if (isPrimitive)
-        {
-          string stringValue;
-          if (location == NanoLocation.Attribute)
-            stringValue = data.GetAttribute(info.Name, false);
-          else
-          {
-            IDataAdapter e = data.GetChild(info.Name);
-            stringValue = e?.Value;
-          }
-
-          if (stringValue != null)
-            value = DeserializePrimitive(info.FieldType, stringValue);
-        }
-        else
-        {
-          IDataAdapter subnode = data.GetChild(info.Name);
-          if (subnode != null)
-            value = DeserializeObject(info.FieldType, subnode, null);
-        }
-
-        info.SetValue(target, value);
-      }*/
     }
 
     private static string ReadString(IDataAdapter data, NanoLocation location, string name)
@@ -639,8 +492,6 @@ namespace BrokenEvent.NanoSerializer
               DeserializeObject(genericArgs[0], element.GetChild("Key"), null),
               DeserializeObject(genericArgs[1], element.GetChild("Value"), null)
             );
-
-        return;
       }
     }
   }
