@@ -9,6 +9,27 @@ namespace BrokenEvent.NanoSerializer
 {
   public static class PerfTest
   {
+    private const int ITERATIONS = 10000000;
+    private static int consoleX, consoleY;
+
+    private static void WriteTestStart(string name)
+    {
+      Console.Write("{0,-40}: ", name);
+      consoleX = Console.CursorLeft;
+      consoleY = Console.CursorTop;
+      Console.ForegroundColor = ConsoleColor.DarkGray;
+      Console.Write("testing...");
+      Console.ForegroundColor = ConsoleColor.Gray;
+    }
+
+    private static void WriteTestFinish(Stopwatch stopwatch)
+    {
+      Console.SetCursorPosition(consoleX, consoleY);
+      Console.ForegroundColor = ConsoleColor.White;
+      Console.WriteLine("{0} / call", 1000f * stopwatch.ElapsedTicks / ITERATIONS);
+      Console.ForegroundColor = ConsoleColor.Gray;
+    }
+
     public class Test
     {
       public string A { get; set; }
@@ -25,8 +46,6 @@ namespace BrokenEvent.NanoSerializer
     {
       ((Test)test).A = (string)s;
     }
-
-    private static Action<Test, string> actionDelegateStatic;
 
     public static void TestPerformance()
     {
@@ -47,96 +66,101 @@ namespace BrokenEvent.NanoSerializer
       Action<object, object> actionLambdaUntyped = (target, arg) => ((Test)target).A = (string)arg;
 
       Action<Test, string> actionDelegate = (Action<Test, string>)Delegate.CreateDelegate(typeof(Action<Test, string>), method);
-      actionDelegateStatic = (Action<Test, string>)Delegate.CreateDelegate(typeof(Action<Test, string>), method);
 
-      const int ITERATIONS = 10000000;
-
+      WriteTestStart("PropertyInfo.SetValue");
       Stopwatch stopwatch = Stopwatch.StartNew();
       for (int i = 0; i < ITERATIONS; i++)
         info.SetValue(test, TEST);
-      stopwatch.Stop();          
-      Console.WriteLine($"SetValue               : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      stopwatch.Stop();
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("MethodInfo.Invoke");
       stopwatch.Restart();
       object[] cache = { TEST };
       for (int i = 0; i < ITERATIONS; i++)
         method.Invoke(test, cache);
       stopwatch.Stop();
-      Console.WriteLine($"Invoke                 : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("InvokationHelper.GetSetDelegate");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         action(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"Action                 : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("InvokationHelper.SetProperty");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         InvocationHelper.SetProperty(test, test.GetType(), info, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"SetProperty            : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("test.A = TEST");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         test.A = TEST;
       stopwatch.Stop();
-      Console.WriteLine($"Direct                 : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("SetTyped(Test test, string s)");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         SetTyped(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"SetTyped               : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("SetUntyped(object test, object s)");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         SetUntyped(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"SetUntyped             : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("Action<Test, string>");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         actionTyped(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"SetTyped(action)       : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("Action<object, object>");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         actionUntyped(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"SetUntyped(action)     : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("=> target.A = arg");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         actionLambdaTyped(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"LambdaTyped            : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("=> ((Test)target).A = (string)arg");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         actionLambdaUntyped(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"LambdaUntyped          : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
+      WriteTestStart("Delegate.CreateDelegate");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         actionDelegate(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"Delegate               : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
-      stopwatch.Restart();
-      for (int i = 0; i < ITERATIONS; i++)
-        actionDelegateStatic(test, TEST);
-      stopwatch.Stop();
-      Console.WriteLine($"DelegateStatic         : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
-
+      WriteTestStart("Delegate.DynamicInvoke");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         action.DynamicInvoke(test, TEST);
       stopwatch.Stop();
-      Console.WriteLine($"DynamicInvoke          : {1000f * stopwatch.ElapsedTicks / ITERATIONS} / call");
+      WriteTestFinish(stopwatch);
 
       Console.WriteLine("-- All done.");
+      Console.WriteLine();
     }
   }  
 }

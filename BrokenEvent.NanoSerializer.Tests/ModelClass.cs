@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Xml;
 
 namespace BrokenEvent.NanoSerializer.Tests
 {
@@ -74,6 +75,32 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       return true;
     }
+
+    public virtual void Serialize(XmlElement el)
+    {
+      el.Attributes.Append(el.OwnerDocument.CreateAttribute("data")).InnerText = Data;
+      if (Subitem != null)
+        Subitem.Serialize((XmlElement)el.AppendChild(el.OwnerDocument.CreateElement("subitem")));
+    }
+
+    public virtual void Deserialize(XmlElement el)
+    {
+      Data = el.GetAttribute("data");
+      XmlElement subEl = el["subitem"];
+      if (subEl != null)
+        Subitem = DeserializeCreate(subEl);
+    }
+
+    public static ModelClass DeserializeCreate(XmlElement el)
+    {
+      ModelClass result;
+      if (el.HasAttribute("sub"))
+        result = new ModelSubclass();
+      else
+        result = new ModelClass();
+      result.Deserialize(el);
+      return result;
+    }
   }
 
   [Serializable]
@@ -85,5 +112,24 @@ namespace BrokenEvent.NanoSerializer.Tests
     }
 
     public List<ModelClass> Subitems { get; }
+
+    public override void Serialize(XmlElement el)
+    {
+      base.Serialize(el);
+      foreach (ModelClass subitem in Subitems)
+        subitem.Serialize((XmlElement)el.AppendChild(el.OwnerDocument.CreateElement("item")));
+
+      el.Attributes.Append(el.OwnerDocument.CreateAttribute("sub")).InnerText = "true";
+    }
+
+    public override void Deserialize(XmlElement el)
+    {
+      base.Deserialize(el);
+      foreach (XmlNode node in el.ChildNodes)
+      {
+        if (node.NodeType == XmlNodeType.Element && node.Name == "item")
+          Subitems.Add(DeserializeCreate((XmlElement)node));
+      }
+    }
   }
 }
