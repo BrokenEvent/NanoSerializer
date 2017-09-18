@@ -180,5 +180,41 @@ namespace BrokenEvent.NanoSerializer
       ilGenerator.Emit(OpCodes.Ret);
       return (Func<object[], object>)method.CreateDelegate(typeof(Func<object[], object>));
     }
+
+    public static Func<object, object> CreateGetFieldDelegate(Type type, FieldInfo field)
+    {
+      typeCache1[0] = typeof(object);
+      DynamicMethod method = new DynamicMethod("_get__" + type.AssemblyQualifiedName + "_" + field.Name, typeof(object), typeCache1, type);
+      ILGenerator ilGenerator = method.GetILGenerator();
+
+      ilGenerator.Emit(OpCodes.Ldarg_0);
+      ilGenerator.Emit(OpCodes.Castclass, type);
+      ilGenerator.Emit(OpCodes.Ldfld, field);
+
+      if (!field.FieldType.IsClass)
+        ilGenerator.Emit(OpCodes.Box, field.FieldType);
+
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Func<object, object>)method.CreateDelegate(typeof(Func<object, object>));
+    }
+
+    public static Action<object, object> CreateSetFieldDelegate(Type type, FieldInfo field)
+    {
+      typeCache2[0] = typeof(object);
+      typeCache2[1] = typeof(object);
+      DynamicMethod method = new DynamicMethod("_set__" + type.AssemblyQualifiedName + "_" + field.Name, null, typeCache2, type);
+      ILGenerator ilGenerator = method.GetILGenerator();
+
+      ilGenerator.Emit(OpCodes.Ldarg_0);
+      ilGenerator.Emit(OpCodes.Castclass, type);
+      ilGenerator.Emit(OpCodes.Ldarg_1);
+
+      if (!field.FieldType.IsClass)
+        ilGenerator.Emit(OpCodes.Unbox_Any, field.FieldType);
+
+      ilGenerator.Emit(OpCodes.Stfld, field);
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Action<object, object>)method.CreateDelegate(typeof(Action<object, object>));
+    }
   }
 }

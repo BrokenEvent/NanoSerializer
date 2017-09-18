@@ -71,6 +71,39 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.C, b.C);
     }
 
+    private class ThreeAttrsTestStruct
+    {
+      public int A;
+      public string B { get; set; }
+      public NanoState C { get; set; }
+    }
+
+    [Test]
+    public void ThreeAttrsStruct()
+    {
+      ThreeAttrsTestStruct a = new ThreeAttrsTestStruct
+      {
+        A = 123,
+        B = "testString",
+        C = NanoState.Ignore
+      };
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(4, target.DocumentElement.Attributes.Count);
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
+      Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
+
+      ThreeAttrsTestStruct b = Deserializer.Deserialize<ThreeAttrsTestStruct>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.AreEqual(a.B, b.B);
+      Assert.AreEqual(a.C, b.C);
+    }
+
     private class ThreeSubnodesTestClass
     {
       [NanoSerialization(Location = NanoLocation.SubNode)]
@@ -293,6 +326,35 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(((CustomConstructorTestClass)a.A).A, ((CustomConstructorTestClass)b.A).A);
       Assert.AreEqual(((CustomConstructorTestClass)a.A).B, ((CustomConstructorTestClass)b.A).B);
       Assert.AreEqual(((CustomConstructorTestClass)a.A).C, ((CustomConstructorTestClass)b.A).C);
+    }
+
+    [Test]
+    public void PolymorphismStruct()
+    {
+      PolymorphismTestClass a = new PolymorphismTestClass
+      {
+        A = new ThreeAttrsTestStruct { A = 1, B = "test", C = NanoState.SerializeSet }
+      };
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+
+      XmlElement aEl = GetElement(target, "A");
+      Assert.NotNull(aEl);
+
+      Assert.AreEqual(0, aEl.ChildNodes.Count);
+      Assert.AreEqual(4, aEl.Attributes.Count);
+      Assert.AreEqual("1", aEl.GetAttribute("A"));
+      Assert.AreEqual("test", aEl.GetAttribute("B"));
+      Assert.AreEqual("SerializeSet", aEl.GetAttribute("C"));
+
+      PolymorphismTestClass b = Deserializer.Deserialize<PolymorphismTestClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(((ThreeAttrsTestStruct)a.A).A, ((ThreeAttrsTestStruct)b.A).A);
+      Assert.AreEqual(((ThreeAttrsTestStruct)a.A).B, ((ThreeAttrsTestStruct)b.A).B);
+      Assert.AreEqual(((ThreeAttrsTestStruct)a.A).C, ((ThreeAttrsTestStruct)b.A).C);
     }
 
     [Test]

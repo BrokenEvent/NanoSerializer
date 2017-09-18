@@ -125,14 +125,18 @@ namespace BrokenEvent.NanoSerializer
 
       if (target != null)
       {
-        // TODO can't be container of flag is set
         type = target.GetType();
-        category = GetTypeCategory(type);
-        if (category == TypeCategory.Unknown)
-          FillObject(TypeCache.GetWrapper(type), target, data);
-        else
-          DeserializeContainer(type, category, data, ref target);
-          
+        if ((flags & OptimizationFlags.NoContainers) == 0)
+        {
+          category = GetTypeCategory(type);
+          if (category != TypeCategory.Unknown)
+          {
+            DeserializeContainer(type, category, data, ref target);
+            return target;
+          }
+        }
+        
+        FillObject(TypeCache.GetWrapper(type), target, data);
         return target;
       }
 
@@ -162,16 +166,18 @@ namespace BrokenEvent.NanoSerializer
       if (IsPrimitive(type))
         return DeserializePrimitive(type, data.Value);
 
-      // TODO can't be container of flag is set
-      // load container
-      category = GetTypeCategory(type);
-      if (category != TypeCategory.Unknown)
+      if ((flags & OptimizationFlags.NoContainers) == 0)
       {
-        DeserializeContainer(type, category, data, ref target);
+        // load container
+        category = GetTypeCategory(type);
+        if (category != TypeCategory.Unknown)
+        {
+          DeserializeContainer(type, category, data, ref target);
 
-        if ((flags & OptimizationFlags.NoReferences) == 0)
-          objectCache.Add(maxObjId++, target);
-        return target;
+          if ((flags & OptimizationFlags.NoReferences) == 0)
+            objectCache.Add(maxObjId++, target);
+          return target;
+        }
       }
 
       // this is unknown object
