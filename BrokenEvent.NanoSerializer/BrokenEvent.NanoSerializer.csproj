@@ -49,7 +49,6 @@
     <Compile Include="NanoLocation.cs" />
     <Compile Include="NanoSerializationAttribute.cs" />
     <Compile Include="NanoState.cs" />
-    <Compile Include="PerfTest.cs" />
     <Compile Include="SerializationBase.cs" />
     <Compile Include="SerializationSettings.cs" />
     <Compile Include="Serializer.cs" />

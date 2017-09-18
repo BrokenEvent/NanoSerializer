@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 #pragma warning disable 1591
 
-namespace BrokenEvent.NanoSerializer
+namespace BrokenEvent.NanoSerializer.Tests
 {
   public static class PerfTest
   {
