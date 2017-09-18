@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 using BrokenEvent.NanoSerializer.Caching;
 
@@ -88,91 +87,35 @@ namespace BrokenEvent.NanoSerializer
       return Type.GetType(name);
     }
 
-    private float TestConstructor(ConstructorInfo info, Dictionary<int, Tuple<object, Type>> args)
+    private object CreateObject(TypeWrapper wrapper, Dictionary<int, object> propertyArgs)
     {
-      float result = 0;
-      ParameterInfo[] parameterInfos = info.GetParameters();
+      object[] args = null;
 
-      // using hint
-      NanoConstructorAttribute attr = info.GetCustomAttribute<NanoConstructorAttribute>();
-      if (attr != null)
-        result += 10;
-
-      // can't be less than minimal count
-      int minParams = args == null ? 0 : args.Count;
-      if (parameterInfos.Length < minParams)
-        return 0;
-
-      float okDelta = 1f / parameterInfos.Length;
-
-      for (int i = 0; i < parameterInfos.Length; i++)
+      if (wrapper.ConstructorArgsCount > 0)
       {
-        Tuple<object, Type> arg;
-        if (args == null || !args.TryGetValue(i, out arg))
+        args = new object[wrapper.ConstructorArgsCount];
+
+        for (int i = 0; i < args.Length; i++)
         {
-          // unable to set null to primitive type arg
-          if (parameterInfos[i].ParameterType.IsPrimitive)
-            result -= 1;
-          continue;
-        }
+          object value;
+          string argName;
+          if (wrapper.ConstructorArgNames.TryGetValue(i, out argName))
+          {
+            if (constructorArgs.TryGetValue(argName, out value))
+            {
+              args[i] = value;
+              continue;
+            }
+          }
 
-        // arg from global list, if possible
-        NanoArgAttribute argAttr = parameterInfos[i].GetCustomAttribute<NanoArgAttribute>();
-        if (argAttr != null && constructorArgs.ContainsKey(argAttr.ArgName))
-        {
-          result += okDelta;
-          continue;
-        }
+          propertyArgs.TryGetValue(i, out value);
 
-        if (CompareTypesSafe(parameterInfos[i].ParameterType, arg.Value2))
-          result += okDelta;
-      }
-      
-      return result;
-    }
-
-    private object CreateObject(Type type, Dictionary<int, Tuple<object, Type>> constructorArgs)
-    {
-      ConstructorInfo ctor = null;
-      float ctorWeight = -999;
-
-      // find best constructor
-      foreach (ConstructorInfo info in type.GetConstructors())
-      {
-        float weight = TestConstructor(info, constructorArgs);
-        if (weight > ctorWeight)
-        {
-          ctor = info;
-          ctorWeight = weight;
-        }
-      }
-
-      if (ctor == null)
-        throw new SerializationException($"Unable to find constructor for {type.Name}");
-
-      // populate constructor args
-      ParameterInfo[] parameterInfos = ctor.GetParameters();
-      object[] args = new object[parameterInfos.Length];
-      for (int i = 0; i < parameterInfos.Length; i++)
-      {
-        object arg;
-        NanoArgAttribute argAttr = parameterInfos[i].GetCustomAttribute<NanoArgAttribute>();
-        if (argAttr != null && this.constructorArgs.TryGetValue(argAttr.ArgName, out arg))
-        {
-          args[i] = arg;
-          continue;
-        }
-
-        Tuple<object, Type> propertyArg;
-        if (constructorArgs.TryGetValue(i, out propertyArg))
-        {
-          args[i] = propertyArg.Value1;
-          continue;
+          args[i] = value;
         }
       }
 
       // create object
-      return ctor.Invoke(args);
+      return wrapper.CreateObject(args);
     }
 
     private object DeserializeObject(Type type, IDataAdapter data, object target)
@@ -182,6 +125,7 @@ namespace BrokenEvent.NanoSerializer
 
       if (target != null)
       {
+        // TODO can't be container of flag is set
         type = target.GetType();
         category = GetTypeCategory(type);
         if (category == TypeCategory.Unknown)
@@ -218,6 +162,7 @@ namespace BrokenEvent.NanoSerializer
       if (IsPrimitive(type))
         return DeserializePrimitive(type, data.Value);
 
+      // TODO can't be container of flag is set
       // load container
       category = GetTypeCategory(type);
       if (category != TypeCategory.Unknown)
@@ -232,7 +177,7 @@ namespace BrokenEvent.NanoSerializer
       // this is unknown object
       TypeWrapper wrapper = TypeCache.GetWrapper(type);
 
-      Dictionary<int, Tuple<object, Type>> constructorArgs = null;
+      Dictionary<int, object> constructorArgs = null;
       for (int i = 0; i < wrapper.Properties.Count; i++)
       {
         PropertyWrapper property = wrapper.Properties[i];
@@ -255,12 +200,12 @@ namespace BrokenEvent.NanoSerializer
 
         // TODO can we avoid the temporary dictionary?
         if (constructorArgs == null)
-          constructorArgs = new Dictionary<int, Tuple<object, Type>>();
-        constructorArgs.Add(property.ConstructorArg, new Tuple<object, Type>(value, property.MemberType));
+          constructorArgs = new Dictionary<int, object>();
+        constructorArgs.Add(property.ConstructorArg, value);
       }
 
       // create object
-      target = CreateObject(type, constructorArgs);
+      target = CreateObject(wrapper, constructorArgs);
       if ((flags & OptimizationFlags.NoReferences) == 0)
         objectCache[maxObjId++] = target;
 

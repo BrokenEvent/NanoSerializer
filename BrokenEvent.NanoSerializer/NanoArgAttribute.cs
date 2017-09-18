@@ -12,8 +12,12 @@ namespace BrokenEvent.NanoSerializer
     /// Creates the instance of the attribute.
     /// </summary>
     /// <param name="argName">Key for object in <see cref="Deserializer.ConstructorArgs"/> to pass into constructor instead of deserialized value.</param>
+    /// <exception cref="ArgumentNullException"> if <paramref name="argName"/> is null or empty</exception>
     public NanoArgAttribute(string argName)
     {
+      if (string.IsNullOrWhiteSpace(argName))
+        throw new ArgumentNullException(nameof(argName));
+
       ArgName = argName;
     }
 
