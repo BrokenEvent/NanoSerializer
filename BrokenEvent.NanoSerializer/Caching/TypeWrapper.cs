@@ -9,9 +9,9 @@ namespace BrokenEvent.NanoSerializer.Caching
     private readonly Type type;
     private readonly List<PropertyWrapper> properties = new List<PropertyWrapper>();
     private readonly List<FieldWrapper> fields = new List<FieldWrapper>();
-    private readonly ConstructorInfo constructor;
     private readonly Dictionary<int, string> constructorArgNames;
     private readonly int constructorArgsCount;
+    private readonly Func<object[], object> createFunc;
     
     public TypeWrapper(Type type)
     {
@@ -20,7 +20,7 @@ namespace BrokenEvent.NanoSerializer.Caching
 
       int maxArgIndex = -1;
       UpdateProperties(ref maxArgIndex);
-      constructor = UpdateConstructors(maxArgIndex, out constructorArgsCount, out constructorArgNames);
+      createFunc = UpdateConstructors(maxArgIndex, out constructorArgsCount, out constructorArgNames);
     }
 
     private void UpdateFields()
@@ -71,11 +71,10 @@ namespace BrokenEvent.NanoSerializer.Caching
       }
     }
 
-    private static float TestConstructor(ConstructorInfo info, PropertyWrapper[] args, Dictionary<int, string> globals, out int paramsCount)
+    private static float TestConstructor(ConstructorInfo info, PropertyWrapper[] args, Dictionary<int, string> globals, ref ParameterInfo[] parameterInfos)
     {
       float result = 0;
-      ParameterInfo[] parameterInfos = info.GetParameters();
-      paramsCount = parameterInfos.Length;
+      parameterInfos = info.GetParameters();
 
       // using hint
       NanoConstructorAttribute attr = info.GetCustomAttribute<NanoConstructorAttribute>();
@@ -117,7 +116,7 @@ namespace BrokenEvent.NanoSerializer.Caching
       return result;
     }
 
-    private ConstructorInfo UpdateConstructors(int maxArgIndex, out int argsCount, out Dictionary<int, string> globalArgNames)
+    private Func<object[], object> UpdateConstructors(int maxArgIndex, out int argsCount, out Dictionary<int, string> globalArgNames)
     {
       PropertyWrapper[] args = null;
       if (maxArgIndex > -1)
@@ -132,22 +131,23 @@ namespace BrokenEvent.NanoSerializer.Caching
       ConstructorInfo bestCtor = null;
       Dictionary<int, string> argNames = new Dictionary<int, string>();
       float bestCtorScore = -1;
-      int bestCtorArgsCount = -1;
+      ParameterInfo[] bestCtorParameterInfos = null;
 
       foreach (ConstructorInfo info in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
       {
+        ParameterInfo[] parameterInfos = null;
         int count;
         if (argNames == null)
           argNames = new Dictionary<int, string>();
         else
           argNames.Clear();
 
-        float score = TestConstructor(info, args, argNames, out count);
+        float score = TestConstructor(info, args, argNames, ref parameterInfos);
         if (score > bestCtorScore)
         {
           bestCtorScore = score;
           bestCtor = info;
-          bestCtorArgsCount = count;
+          bestCtorParameterInfos = parameterInfos;
           globalArgNames = argNames;
           argNames = null;
         }
@@ -156,8 +156,8 @@ namespace BrokenEvent.NanoSerializer.Caching
       if (bestCtor == null)
         throw new SerializationException($"Unable to get best constructor for {type.FullName}");
 
-      argsCount = bestCtorArgsCount;
-      return bestCtor;
+      argsCount = bestCtorParameterInfos.Length;
+      return InvocationHelper.CreateConstructorDelegate(type, bestCtor, bestCtorParameterInfos);
     }
 
     public IList<PropertyWrapper> Properties
@@ -182,7 +182,7 @@ namespace BrokenEvent.NanoSerializer.Caching
 
     public object CreateObject(object[] args)
     {
-      return constructor.Invoke(args);
+      return createFunc(args);
     }
   }
 }

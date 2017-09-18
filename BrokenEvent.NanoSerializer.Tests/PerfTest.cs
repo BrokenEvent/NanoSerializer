@@ -26,12 +26,16 @@ namespace BrokenEvent.NanoSerializer.Tests
     {
       Console.SetCursorPosition(consoleX, consoleY);
       Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine("{0} / call", 1000f * stopwatch.ElapsedTicks / ITERATIONS);
+      Console.WriteLine("{0} mTick/call", 1000f * stopwatch.ElapsedTicks / ITERATIONS);
       Console.ForegroundColor = ConsoleColor.Gray;
     }
 
     public class Test
     {
+      public Test() { }
+
+      public Test(string a) { }
+
       public string A { get; set; }
     }
 
@@ -81,7 +85,10 @@ namespace BrokenEvent.NanoSerializer.Tests
       Action<Test, string> actionDelegate = (Action<Test, string>)Delegate.CreateDelegate(typeof(Action<Test, string>), method);
       Func<object> actionCreateLambda = CreateConstructorDelegate(typeof(Test));
       Func<object> actionCreateEmit = InvocationHelper.CreateConstructorDelegate(typeof(Test));
-      ConstructorInfo ctor = typeof(Test).GetConstructor(new Type[0]);
+      ConstructorInfo ctor = typeof(Test).GetConstructor(Type.EmptyTypes);
+
+      ConstructorInfo ctorString = typeof(Test).GetConstructor(new Type[]{typeof(string)});
+      Func<object[], object> actionCreateEmitString = InvocationHelper.CreateConstructorDelegate(typeof(Test), ctorString);
 
       Console.ForegroundColor = ConsoleColor.Cyan;
       Console.WriteLine("Performance test: Property set...");
@@ -184,7 +191,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       stopwatch.Stop();
       WriteTestFinish(stopwatch);
 
-      WriteTestStart("InvocationHelper.CreateConstructorDelegate");
+      WriteTestStart("CreateConstructorDelegate");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         actionCreateEmit();
@@ -210,6 +217,35 @@ namespace BrokenEvent.NanoSerializer.Tests
       for (int i = 0; i < ITERATIONS; i++)
         // ReSharper disable once ObjectCreationAsStatement
         new Test();
+      stopwatch.Stop();
+      WriteTestFinish(stopwatch);
+
+      WriteTestStart("Activator.Create (string)");
+      stopwatch.Restart();
+      for (int i = 0; i < ITERATIONS; i++)
+        Activator.CreateInstance(typeof(Test), cache);
+      stopwatch.Stop();
+      WriteTestFinish(stopwatch);
+
+      WriteTestStart("CreateConstructorDelegate(string)");
+      stopwatch.Restart();
+      for (int i = 0; i < ITERATIONS; i++)
+        actionCreateEmitString(cache);
+      stopwatch.Stop();
+      WriteTestFinish(stopwatch);
+
+      WriteTestStart("ConstructorInfo.Invoke(string)");
+      stopwatch.Restart();
+      for (int i = 0; i < ITERATIONS; i++)
+        ctorString.Invoke(cache);
+      stopwatch.Stop();
+      WriteTestFinish(stopwatch);
+
+      WriteTestStart("new Test(string)");
+      stopwatch.Restart();
+      for (int i = 0; i < ITERATIONS; i++)
+        // ReSharper disable once ObjectCreationAsStatement
+        new Test(TEST);
       stopwatch.Stop();
       WriteTestFinish(stopwatch);
 

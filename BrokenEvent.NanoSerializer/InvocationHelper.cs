@@ -134,5 +134,51 @@ namespace BrokenEvent.NanoSerializer
       ilGenerator.Emit(OpCodes.Ret);
       return (Func<object>)method.CreateDelegate(typeof(Func<object>));
     }
+
+    private static void EmitLdc(ILGenerator il, int index)
+    {
+      switch (index)
+      {
+        case 0: il.Emit(OpCodes.Ldc_I4_0); break;
+        case 1: il.Emit(OpCodes.Ldc_I4_1); break;
+        case 2: il.Emit(OpCodes.Ldc_I4_2); break;
+        case 3: il.Emit(OpCodes.Ldc_I4_3); break;
+        case 4: il.Emit(OpCodes.Ldc_I4_4); break;
+        case 5: il.Emit(OpCodes.Ldc_I4_5); break;
+        case 6: il.Emit(OpCodes.Ldc_I4_6); break;
+        case 7: il.Emit(OpCodes.Ldc_I4_7); break;
+        case 8: il.Emit(OpCodes.Ldc_I4_8); break;
+        default:
+          il.Emit(OpCodes.Ldc_I4_S, index);
+          break;
+      }
+    }
+
+    public static Func<object[], object> CreateConstructorDelegate(Type type, ConstructorInfo ctor, ParameterInfo[] parameterInfos = null)
+    {
+      if (parameterInfos == null)
+        parameterInfos = ctor.GetParameters();
+
+      typeCache1[0] = typeof(object[]);
+
+      DynamicMethod method = new DynamicMethod("_create2__" + type.AssemblyQualifiedName, type, typeCache1, type);
+      ILGenerator ilGenerator = method.GetILGenerator();
+
+      for (int i = 0; i < parameterInfos.Length; i++)
+      {
+        ilGenerator.Emit(OpCodes.Ldarg_0);
+        EmitLdc(ilGenerator, i);
+        ilGenerator.Emit(OpCodes.Ldelem_Ref);
+
+        if (parameterInfos[i].ParameterType.IsClass)
+          ilGenerator.Emit(OpCodes.Castclass, parameterInfos[i].ParameterType);
+        else
+          ilGenerator.Emit(OpCodes.Unbox_Any, parameterInfos[i].ParameterType);
+      }
+
+      ilGenerator.Emit(OpCodes.Newobj, ctor);
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Func<object[], object>)method.CreateDelegate(typeof(Func<object[], object>));
+    }
   }
 }
