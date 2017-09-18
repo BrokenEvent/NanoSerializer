@@ -68,7 +68,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       const string TEST = "1";
 
       info.SetValue(test, TEST);
-      Action<object, object> action = InvocationHelper.GetSetDelegate(typeof(Test), typeof(string), info.SetMethod);
+      Action<object, object> action = InvocationHelper.CreateSetDelegate(typeof(Test), typeof(string), info.SetMethod);
       MethodInfo method = info.SetMethod;
 
       action(test, TEST);
@@ -102,17 +102,10 @@ namespace BrokenEvent.NanoSerializer.Tests
       stopwatch.Stop();
       WriteTestFinish(stopwatch);
 
-      WriteTestStart("InvokationHelper.GetSetDelegate");
+      WriteTestStart("InvocationHelper.GetSetDelegate");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         action(test, TEST);
-      stopwatch.Stop();
-      WriteTestFinish(stopwatch);
-
-      WriteTestStart("InvokationHelper.SetProperty");
-      stopwatch.Restart();
-      for (int i = 0; i < ITERATIONS; i++)
-        InvocationHelper.SetProperty(test, test.GetType(), info, TEST);
       stopwatch.Stop();
       WriteTestFinish(stopwatch);
 
