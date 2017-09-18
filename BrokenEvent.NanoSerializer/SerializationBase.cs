@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+
+using BrokenEvent.NanoSerializer.Caching;
+
 #pragma warning disable 1591
 
 namespace BrokenEvent.NanoSerializer
@@ -52,7 +56,7 @@ namespace BrokenEvent.NanoSerializer
       }
     }
 
-    protected static bool IsPrimitive(Type type)
+    internal static bool IsPrimitive(Type type)
     {
       return primitiveTypes.ContainsKey(type) || type.IsEnum;
     }
@@ -76,13 +80,61 @@ namespace BrokenEvent.NanoSerializer
              a.Assembly == b.Assembly;
     }
 
-    protected static bool HaveInterface(Type type, Type iface)
+    internal static bool HaveInterface(Type type, Type iface)
     {
-      foreach (Type @interface in type.GetInterfaces())
+      if (CompareTypesSafe(type, iface))
+        return true;
+
+      foreach (Type @interface in TypeCache.GetTypeInterfaces(type))
         if (CompareTypesSafe(@interface, iface))
           return true;
 
       return false;
+    }
+
+    internal static TypeCategory GetTypeCategory(Type type)
+    {
+      if (IsPrimitive(type))
+        return TypeCategory.Primitive;
+
+      if (type.IsArray)
+        return TypeCategory.Array;
+
+      if (type.IsGenericType)
+      {
+        Type genericType = type.GetGenericTypeDefinition();
+
+        if (HaveInterface(type, typeof(IList<>)))
+          return TypeCategory.GenericIList;
+
+        if (genericType == typeof(Queue<>))
+          return TypeCategory.GenericQueue;
+
+        if (genericType == typeof(Stack<>))
+          return TypeCategory.GenericStack;
+
+        if (HaveInterface(genericType, typeof(ISet<>)))
+          return TypeCategory.ISet;
+
+        if (genericType == typeof(LinkedList<>))
+          return TypeCategory.LinkedList;
+
+        if (HaveInterface(genericType, typeof(IDictionary<,>)))
+          return TypeCategory.IDictionary;
+      }
+      else
+      {
+        if (HaveInterface(type, typeof(IList)))
+          return TypeCategory.IList;
+
+        if (type == typeof(Queue))
+          return TypeCategory.Queue;
+
+        if (type == typeof(Stack))
+          return TypeCategory.Stack;
+      }
+
+      return TypeCategory.Unknown;
     }
   }
 }

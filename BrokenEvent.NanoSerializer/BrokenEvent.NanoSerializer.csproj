@@ -36,6 +36,12 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Caching\TypeCategory.cs" />
+    <Compile Include="Caching\FieldWrapper.cs" />
+    <Compile Include="Caching\MemberWrapper.cs" />
+    <Compile Include="Caching\PropertyWrapper.cs" />
+    <Compile Include="Caching\TypeCache.cs" />
+    <Compile Include="Caching\TypeWrapper.cs" />
     <Compile Include="Deserializer.cs" />
     <Compile Include="IDataAdapter.cs" />
     <Compile Include="InvocationHelper.cs" />
