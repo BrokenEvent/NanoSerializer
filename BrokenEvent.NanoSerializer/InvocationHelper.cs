@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace BrokenEvent.NanoSerializer
 {
@@ -36,6 +37,8 @@ namespace BrokenEvent.NanoSerializer
 
     // it is not thread safe even without this
     private static object[] argsCache1 = new object[1];
+    private static Type[] typeCache1 = new Type[1];
+    private static Type[] typeCache2 = new Type[2];
 
     private static Action<object, object> GenericSetHelper1<TTarget, TArg>(MethodInfo info)
     {
@@ -80,8 +83,28 @@ namespace BrokenEvent.NanoSerializer
       return (Action<object, object>)actualHelper.Invoke(null, argsCache1);
     }
 
+    public static Action<object, object> CreateSetDelegate(Type type, Type argType, string name)
+    {
+      typeCache1[0] = argType;
+      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache1, null);
+      MethodInfo actualHelper = genericSetHelper1.MakeGenericMethod(type, argType);
+      argsCache1[0] = info;
+      return (Action<object, object>)actualHelper.Invoke(null, argsCache1);
+    }
+
     public static Action<object, object, object> CreateSetDelegate(Type type, Type arg1Type, Type arg2Type, MethodInfo info)
     {
+      MethodInfo actualHelper = genericSetHelper2.MakeGenericMethod(type, arg1Type, arg2Type);
+      argsCache1[0] = info;
+      return (Action<object, object, object>)actualHelper.Invoke(null, argsCache1);
+    }
+
+    // TODO cleanup unused methods and caching
+    public static Action<object, object, object> CreateSetDelegate(Type type, Type arg1Type, Type arg2Type, string name)
+    {
+      typeCache2[0] = arg1Type;
+      typeCache2[1] = arg2Type;
+      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache2, null);
       MethodInfo actualHelper = genericSetHelper2.MakeGenericMethod(type, arg1Type, arg2Type);
       argsCache1[0] = info;
       return (Action<object, object, object>)actualHelper.Invoke(null, argsCache1);
@@ -104,6 +127,25 @@ namespace BrokenEvent.NanoSerializer
       MethodInfo actualHelper = genericGetSetHelper.MakeGenericMethod(type, argType, resultType);
       argsCache1[0] = info;
       return (Func<object, object, object>)actualHelper.Invoke(null, argsCache1);
+    }
+
+    public static Func<object, object, object> CreateGetSetDelegate(Type type, Type argType, Type resultType, string name)
+    {
+      typeCache1[0] = argType;
+      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache1, null);
+
+      MethodInfo actualHelper = genericGetSetHelper.MakeGenericMethod(type, argType, resultType);
+      argsCache1[0] = info;
+      return (Func<object, object, object>)actualHelper.Invoke(null, argsCache1);
+    }
+
+    public static Func<object> CreateConstructorDelegate(Type type)
+    {
+      DynamicMethod method = new DynamicMethod("_create__" + type.AssemblyQualifiedName, type, null, typeof(InvocationHelper));
+      ILGenerator ilGenerator = method.GetILGenerator();
+      ilGenerator.Emit(OpCodes.Newobj, type.GetConstructor(Type.EmptyTypes));
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Func<object>)method.CreateDelegate(typeof(Func<object>));
     }
 
     public static Action<object, object> GetSetDelegate(Type type, Type argType, string name)

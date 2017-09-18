@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+
+using BrokenEvent.NanoSerializer.Caching;
 
 namespace BrokenEvent.NanoSerializer
 {
@@ -176,15 +177,24 @@ namespace BrokenEvent.NanoSerializer
 
     private object DeserializeObject(Type type, IDataAdapter data, object target)
     {
+      // existing object
+      TypeCategory category;
+
       if (target != null)
       {
-        if (!DeserializeContainer(type, data, ref target))
-          FillObject(target.GetType(), target, data);
+        type = target.GetType();
+        category = GetTypeCategory(type);
+        if (category == TypeCategory.Unknown)
+          FillObject(TypeCache.GetWrapper(type), target, data);
+        else
+          DeserializeContainer(type, category, data, ref target);
+          
         return target;
       }
 
       int objId = -1;
 
+      // resolve reference, if any
       if ((flags & OptimizationFlags.NoReferences) == 0)
       {
         string objIdStr = data.GetAttribute(ATTRIBUTE_OBJID, true);
@@ -195,6 +205,7 @@ namespace BrokenEvent.NanoSerializer
         }
       }
 
+      // fix type, if needed
       string typeName = data.GetAttribute(ATTRIBUTE_TYPE, true);
       if (typeName != null)
       {
@@ -203,19 +214,52 @@ namespace BrokenEvent.NanoSerializer
           throw new SerializationException($"Unable to find type {typeName}");
       }
 
+      // primitive type?
       if (IsPrimitive(type))
         return DeserializePrimitive(type, data.Value);
 
-      if (DeserializeContainer(type, data, ref target))
+      // load container
+      category = GetTypeCategory(type);
+      if (category != TypeCategory.Unknown)
       {
+        DeserializeContainer(type, category, data, ref target);
+
         if ((flags & OptimizationFlags.NoReferences) == 0)
           objectCache.Add(maxObjId++, target);
         return target;
       }
 
-      Dictionary<int, Tuple<object, Type>> constructorArgs = null;
+      // this is unknown object
+      TypeWrapper wrapper = TypeCache.GetWrapper(type);
 
-      // read properties required for object creation
+      Dictionary<int, Tuple<object, Type>> constructorArgs = null;
+      for (int i = 0; i < wrapper.Properties.Count; i++)
+      {
+        PropertyWrapper property = wrapper.Properties[i];
+        if (property.ConstructorArg == -1)
+          continue;
+
+        object value = null;
+        if (property.TypeCategory == TypeCategory.Primitive)
+        {
+          string stringValue = ReadString(data, property.Location, property.Info.Name);
+          if (stringValue != null)
+            value = DeserializePrimitive(property.MemberType, stringValue);
+        }
+        else
+        {
+          IDataAdapter subnode = data.GetChild(property.Info.Name);
+          if (subnode != null)
+            value = DeserializeObject(property.MemberType, subnode, null);
+        }
+
+        // TODO can we avoid the temporary dictionary?
+        if (constructorArgs == null)
+          constructorArgs = new Dictionary<int, Tuple<object, Type>>();
+        constructorArgs.Add(property.ConstructorArg, new Tuple<object, Type>(value, property.MemberType));
+      }
+
+      /*// read properties required for object creation
       foreach (PropertyInfo info in type.GetProperties())
       {
         NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
@@ -253,21 +297,52 @@ namespace BrokenEvent.NanoSerializer
         if (constructorArgs == null)
           constructorArgs = new Dictionary<int, Tuple<object, Type>>();
         constructorArgs.Add(attr.ConstructorArg, new Tuple<object, Type>(value, info.PropertyType));
-      }
+      }*/
 
       // create object
       target = CreateObject(type, constructorArgs);
       if ((flags & OptimizationFlags.NoReferences) == 0)
         objectCache[maxObjId++] = target;
 
-      FillObject(type, target, data);
+      FillObject(wrapper, target, data);
 
       return target;
     }
 
-    private void FillObject(Type type, object target, IDataAdapter data)
+    private void FillObject(TypeWrapper wrapper, object target, IDataAdapter data)
     {
-      // read common properties
+      for (int i = 0; i < wrapper.Properties.Count; i++)
+      {
+        PropertyWrapper property = wrapper.Properties[i];
+
+        // should be already loaded at this time
+        if (property.ConstructorArg != -1)
+          continue;
+
+        if (property.TypeCategory == TypeCategory.Primitive)
+        {
+          if (!property.Info.CanWrite)
+            continue;
+
+          string stringValue = ReadString(data, property.Location, property.Info.Name);
+          if (stringValue != null)
+            property.SetValue(target, DeserializePrimitive(property.MemberType, stringValue));
+        }
+        else
+        {
+          IDataAdapter subnode = data.GetChild(property.Info.Name);
+          if (subnode != null)
+          {
+            object currentValue = property.GetValue(target);
+            if (currentValue == null)
+              property.SetValue(target, DeserializeObject(property.MemberType, subnode, null));
+            else
+              DeserializeObject(property.MemberType, subnode, currentValue);
+          }
+        }
+      }
+
+      /*// read common properties
       foreach (PropertyInfo info in type.GetProperties())
       {
         // can't be read, so can't be serialized
@@ -329,9 +404,31 @@ namespace BrokenEvent.NanoSerializer
               DeserializeObject(info.PropertyType, subnode, currentValue);
           }
         }
+      }*/
+
+      for (int i = 0; i < wrapper.Fields.Count; i++)
+      {
+        FieldWrapper field = wrapper.Fields[i];
+
+        if (field.TypeCategory == TypeCategory.Primitive)
+        {
+          string stringValue = ReadString(data, field.Location, field.Info.Name);
+          if (stringValue != null)
+            field.SetValue(target, DeserializePrimitive(field.Info.FieldType, stringValue));
+        }
+        else
+        {
+          IDataAdapter subnode = data.GetChild(field.Info.Name);
+          if (subnode != null)
+          {
+            object value = DeserializeObject(field.MemberType, subnode, null);
+            if (value != null)
+              field.SetValue(target, value);
+          }
+        }
       }
 
-      // read fields
+      /*// read fields
       foreach (FieldInfo info in type.GetFields())
       {
         NanoState state = NanoState.Serialize;
@@ -374,15 +471,30 @@ namespace BrokenEvent.NanoSerializer
         }
 
         info.SetValue(target, value);
-      }
+      }*/
+    }
+
+    private static string ReadString(IDataAdapter data, NanoLocation location, string name)
+    {
+      if (location == NanoLocation.Attribute)
+        return data.GetAttribute(name, false);
+
+      IDataAdapter e = data.GetChild(name);
+      return e?.Value;
     }
 
     private void DeserializeContainer(ref object container, Type type, Type elementType, IDataAdapter data, string addMethodName, bool reverse = false)
     {
       if (container == null)
-        container = Activator.CreateInstance(type);
+        container = TypeCache.CreateParameterless(type);
 
-      Action<object, object> addAction = InvocationHelper.GetSetDelegate(type, elementType, addMethodName);
+      Action<object, object> addAction = null;
+      if (!TypeCache.TryGetTypeAccessor(type, ref addAction))
+      {
+        addAction = InvocationHelper.CreateSetDelegate(type, elementType, addMethodName);
+        TypeCache.AddTypeAccessor(type, addAction);
+      }
+
       if (reverse)
         foreach (IDataAdapter element in data.GetChildrenReversed())
           addAction(container, DeserializeObject(elementType, element, null));
@@ -394,10 +506,15 @@ namespace BrokenEvent.NanoSerializer
     private void DeserializeContainer(ref object container, Type type, Type elementType, Type returnType, IDataAdapter data, string addMethodName)
     {
       if (container == null)
-        container = Activator.CreateInstance(type);
-      MethodInfo methodInfo = type.GetMethod(addMethodName, new Type[]{elementType});
+        container = TypeCache.CreateParameterless(type);
 
-      Func<object, object, object> addFunc = InvocationHelper.GetGetSetDelegate(type, elementType, returnType, methodInfo);
+      Func<object, object, object> addFunc = null;
+      if (!TypeCache.TryGetTypeAccessor(type, ref addFunc))
+      {
+        addFunc = InvocationHelper.CreateGetSetDelegate(type, elementType, returnType, addMethodName);
+        TypeCache.AddTypeAccessor(type, addFunc);
+      }
+
       foreach (IDataAdapter element in data.GetChildren())
         addFunc(container, DeserializeObject(elementType, element, null));
     }
@@ -441,15 +558,10 @@ namespace BrokenEvent.NanoSerializer
         ScanArrayRanks(firstChild, lengths, index + 1);
     }
 
-    private bool DeserializeContainer(Type type, IDataAdapter data, ref object target)
+    private void DeserializeContainer(Type type, TypeCategory category, IDataAdapter data, ref object target)
     {
-      if ((flags & OptimizationFlags.NoContainers) != 0)
-        return false;
-
-      if (target != null)
-        type = target.GetType();
-
-      if (type.IsArray)
+      // arrays
+      if (category == TypeCategory.Array)
       {
         Type elementType = type.GetElementType();
         int[] lengths = new int[int.Parse(data.GetAttribute(ATTRIBUTE_ARRAY_RANK, true))];
@@ -464,85 +576,72 @@ namespace BrokenEvent.NanoSerializer
         int[] coords = new int[array.Rank];
         DeserializeArrayRank(array, elementType, coords, 0, data);
 
-        return true;
+        return;
       }
 
-      if (type.IsGenericType)
+      // non generic containers
+      switch (category)
       {
-        Type genericType = type.GetGenericTypeDefinition();
-        Type genericArg = type.GetGenericArguments()[0];
-
-        if (HaveInterface(type, typeof(IList<>)))
-        {
-          DeserializeContainer(ref target, type, genericArg, data, "Add");
-          return true;
-        }
-
-        if (genericType == typeof(Queue<>))
-        {
-          DeserializeContainer(ref target, type, genericArg, data, "Enqueue");
-          return true;
-        }
-
-        if (genericType == typeof(Stack<>))
-        {
-          DeserializeContainer(ref target, type, genericArg, data, "Push", true);
-          return true;
-        }
-
-        if (HaveInterface(genericType, typeof(ISet<>)))
-        {
-          DeserializeContainer(ref target, type, genericArg, typeof(bool), data, "Add");
-          return true;
-        }
-
-        if (genericType == typeof(LinkedList<>))
-        {
-          Type nodeType = typeof(LinkedListNode<>).MakeGenericType(genericArg);
-          DeserializeContainer(ref target, type, genericArg, nodeType, data, "AddLast");
-          return true;
-        }
-
-        if (HaveInterface(genericType, typeof(IDictionary<,>)))
-        {
-          if (target == null)
-            target = Activator.CreateInstance(type);
-
-          Type valueType = type.GetGenericArguments()[1];
-
-          Action<object, object, object> setAction = InvocationHelper.GetSetDelegate(type, genericArg, valueType, "Add");
-          foreach (IDataAdapter element in data.GetChildren())
-            setAction(
-                target,
-                DeserializeObject(genericArg, element.GetChild("Key"), null),
-                DeserializeObject(valueType, element.GetChild("Value"), null)
-              );
-
-          return true;
-        }
-      }
-      else
-      {
-        if (HaveInterface(type, typeof(IList)))
-        {
+        case TypeCategory.IList:
           DeserializeContainer(ref target, type, typeof(object), data, "Add");
-          return true;
-        }
+          return;
 
-        if (type == typeof(Queue))
-        {
+        case TypeCategory.Queue:
           DeserializeContainer(ref target, type, typeof(object), data, "Enqueue");
-          return true;
-        }
+          return;
 
-        if (type == typeof(Stack))
-        {
+        case TypeCategory.Stack:
           DeserializeContainer(ref target, type, typeof(object), data, "Push", true);
-          return true;
-        }
+          return;
       }
 
-      return false;
+      // generics
+      Type[] genericArgs = TypeCache.GetTypeGenericArgs(type);
+
+      switch (category)
+      {
+        case TypeCategory.GenericIList:
+          DeserializeContainer(ref target, type, genericArgs[0], data, "Add");
+          return;
+
+        case TypeCategory.GenericQueue:
+          DeserializeContainer(ref target, type, genericArgs[0], data, "Enqueue");
+          return;
+
+        case TypeCategory.GenericStack:
+          DeserializeContainer(ref target, type, genericArgs[0], data, "Push", true);
+          return;
+
+        case TypeCategory.ISet:
+          DeserializeContainer(ref target, type, genericArgs[0], typeof(bool), data, "Add");
+          return;
+
+        case TypeCategory.LinkedList:
+          DeserializeContainer(ref target, type, genericArgs[0], typeof(LinkedListNode<>).MakeGenericType(genericArgs[0]), data, "AddLast");
+          return;
+      }
+
+      if (category == TypeCategory.IDictionary)
+      {
+        if (target == null)
+          target = TypeCache.CreateParameterless(type);
+
+        Action<object, object, object> setAction = null;
+        if (!TypeCache.TryGetTypeAccessor(type, ref setAction))
+        {
+          setAction = InvocationHelper.CreateSetDelegate(type, genericArgs[0], genericArgs[1], "Add");
+          TypeCache.AddTypeAccessor(type, setAction);
+        }
+
+        foreach (IDataAdapter element in data.GetChildren())
+          setAction(
+              target,
+              DeserializeObject(genericArgs[0], element.GetChild("Key"), null),
+              DeserializeObject(genericArgs[1], element.GetChild("Value"), null)
+            );
+
+        return;
+      }
     }
   }
 }

@@ -5,57 +5,29 @@ namespace BrokenEvent.NanoSerializer.Caching
 {
   internal abstract class MemberWrapper
   {
-    private readonly Type ownerType;
-    private readonly Type memberType;
-    private readonly MemberInfo memberInfo;
-    private readonly NanoLocation location;
-    private readonly TypeCategory typeCategory;
-    private readonly Type[] genericArguments;
+    public readonly Type OwnerType;
+    public readonly Type MemberType;
+    public readonly MemberInfo MemberInfo;
+    public readonly NanoLocation Location;
+    public readonly NanoState State;
+    public readonly TypeCategory TypeCategory;
+    public readonly Type[] GenericArguments;
 
-    protected MemberWrapper(Type ownerType, MemberInfo memberInfo, Type memberType, NanoLocation location)
+    protected MemberWrapper(Type ownerType, MemberInfo memberInfo, Type memberType, NanoLocation location, NanoState state)
     {
-      this.ownerType = ownerType;
-      this.memberInfo = memberInfo;
-      this.memberType = memberType;
-      typeCategory = SerializationBase.GetTypeCategory(memberType);
+      OwnerType = ownerType;
+      MemberInfo = memberInfo;
+      MemberType = memberType;
+      State = state;
+
+      TypeCategory = SerializationBase.GetTypeCategory(memberType);
 
       if (location == NanoLocation.Auto)
-        this.location = typeCategory == TypeCategory.Primitive ? NanoLocation.Attribute : NanoLocation.SubNode;
+        Location = TypeCategory == TypeCategory.Primitive ? NanoLocation.Attribute : NanoLocation.SubNode;
       else
-        this.location = location;
+        Location = location;
 
-      if (memberType.IsGenericType)
-        genericArguments = memberType.GetGenericArguments();
-    }
-
-    public Type OwnerType
-    {
-      get { return ownerType; }
-    }
-
-    public MemberInfo MemberInfo
-    {
-      get { return memberInfo; }
-    }
-
-    public NanoLocation Location
-    {
-      get { return location; }
-    }
-
-    public Type MemberType
-    {
-      get { return memberType; }
-    }
-
-    public TypeCategory TypeCategory
-    {
-      get { return typeCategory; }
-    }
-
-    public Type[] GenericArguments
-    {
-      get { return genericArguments; }
+      GenericArguments = TypeCache.GetTypeGenericArgs(memberType);
     }
 
     public abstract object GetValue(object target);

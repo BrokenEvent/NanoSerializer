@@ -11,6 +11,8 @@ namespace BrokenEvent.NanoSerializer.Caching
     private static Dictionary<Type, object> typeAccessors = new Dictionary<Type, object>();
     private static Dictionary<Type, Dictionary<string, object>> typeNamesAccessors = new Dictionary<Type, Dictionary<string, object>>();
     private static Dictionary<Type, Type[]> typeInterfaces = new Dictionary<Type, Type[]>();
+    private static Dictionary<Type, Type[]> typeGenericArgs = new Dictionary<Type, Type[]>();
+    private static Dictionary<Type, Func<object>> typeConstructors = new Dictionary<Type, Func<object>>();
 
     public static TypeWrapper GetWrapper(Type type)
     {
@@ -97,6 +99,33 @@ namespace BrokenEvent.NanoSerializer.Caching
       typeInterfaces.Add(type, result);
 
       return result;
+    }
+
+    public static Type[] GetTypeGenericArgs(Type type)
+    {
+      if (!type.IsGenericType)
+        return null;
+
+      Type[] result;
+      if (typeGenericArgs.TryGetValue(type, out result))
+        return result;
+
+      result = type.GetGenericArguments();
+      typeGenericArgs.Add(type, result);
+
+      return result;
+    }
+
+    public static object CreateParameterless(Type type)
+    {
+      Func<object> func;
+      if (!typeConstructors.TryGetValue(type, out func))
+      {
+        func = InvocationHelper.CreateConstructorDelegate(type);
+        typeConstructors.Add(type, func);
+      }
+
+      return func();
     }
   }
 }

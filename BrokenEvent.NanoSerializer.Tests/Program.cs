@@ -146,10 +146,8 @@ namespace BrokenEvent.NanoSerializer.Tests
     [STAThread]
     static void Main()
     {
-      Console.ForegroundColor = ConsoleColor.Cyan;
-      Console.WriteLine("Performance test...");
-      Console.ForegroundColor = ConsoleColor.Gray;
       PerfTest.TestPerformance();
+      Console.ReadLine();
 
       WriteWarmUp("Model");
       ModelClass target = ModelClass.BuildObjectsModel(5, 3);

@@ -5,29 +5,24 @@ namespace BrokenEvent.NanoSerializer.Caching
 {
   internal class FieldWrapper: MemberWrapper
   {
-    private readonly FieldInfo info;
+    public readonly FieldInfo Info;
 
-    public FieldWrapper(Type ownerType, FieldInfo info, NanoLocation location):
-      base(ownerType, info, info.FieldType, location)
+    public FieldWrapper(Type ownerType, FieldInfo info, NanoLocation location, NanoState state) :
+      base(ownerType, info, info.FieldType, location, state)
     {
-      this.info = info;
-    }
-
-    public FieldInfo Info
-    {
-      get { return info; }
+      Info = info;
     }
 
     public override object GetValue(object target)
     {
       // TODO optz fields
-      return info.GetValue(target);
+      return Info.GetValue(target);
     }
 
     public override void SetValue(object target, object value)
     {
       // TODO optz fields
-      info.SetValue(target, value);
+      Info.SetValue(target, value);
     }
   }
 }
