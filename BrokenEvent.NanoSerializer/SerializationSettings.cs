@@ -16,6 +16,7 @@
       DictionaryValueName = "Value";
       ArrayItemName = "A";
       AssemblyQualifiedNames = true;
+      SerializePrivateProperties = false;
     }
 
     /// <summary>
@@ -60,5 +61,10 @@
     /// If set to false, namespace qualified names will be used.
     /// </summary>
     public bool AssemblyQualifiedNames { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value indicating whether the private properties will also be serialized.
+    /// </summary>
+    public bool SerializePrivateProperties { get; set; }
   }
 }

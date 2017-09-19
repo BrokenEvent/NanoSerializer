@@ -38,7 +38,7 @@ namespace BrokenEvent.NanoSerializer
     /// <exception cref="SerializationException">thrown when deserialization fails</exception>
     public T DeserializeObject<T>(IDataAdapter data)
     {
-      string flagsStr = data.GetAttribute(ATTRIBUTE_FLAGS, true);
+      string flagsStr = data.GetSystemAttribute(ATTRIBUTE_FLAGS);
       if (flagsStr != null)
         flags = (OptimizationFlags)int.Parse(flagsStr);
       return (T)DeserializeObject(typeof(T), data, null);
@@ -135,7 +135,7 @@ namespace BrokenEvent.NanoSerializer
       // resolve reference, if any
       if ((flags & OptimizationFlags.NoReferences) == 0)
       {
-        string objIdStr = data.GetAttribute(ATTRIBUTE_OBJID, true);
+        string objIdStr = data.GetSystemAttribute(ATTRIBUTE_OBJID);
         if (objIdStr != null)
         {
           objId = int.Parse(objIdStr);
@@ -144,7 +144,7 @@ namespace BrokenEvent.NanoSerializer
       }
 
       // fix type, if needed
-      string typeName = data.GetAttribute(ATTRIBUTE_TYPE, true);
+      string typeName = data.GetSystemAttribute(ATTRIBUTE_TYPE);
       if (typeName != null)
       {
         type = InternalResolveTypes(typeName);
@@ -195,10 +195,34 @@ namespace BrokenEvent.NanoSerializer
             value = DeserializeObject(property.MemberType, subnode, null);
         }
 
-        // TODO can we avoid the temporary dictionary?
         if (constructorArgs == null)
           constructorArgs = new object[wrapper.ConstructorArgsCount];
         constructorArgs[property.ConstructorArg] = value;
+      }
+
+      for (int i = 0; i < wrapper.Fields.Count; i++)
+      {
+        FieldWrapper field = wrapper.Fields[i];
+        if (field.ConstructorArg == -1)
+          continue;
+
+        object value = null;
+        if (field.TypeCategory == TypeCategory.Primitive)
+        {
+          string stringValue = ReadString(data, field.Location, field.Info.Name);
+          if (stringValue != null)
+            value = DeserializePrimitive(field.MemberType, stringValue);
+        }
+        else
+        {
+          IDataAdapter subnode = data.GetChild(field.Info.Name);
+          if (subnode != null)
+            value = DeserializeObject(field.MemberType, subnode, null);
+        }
+
+        if (constructorArgs == null)
+          constructorArgs = new object[wrapper.ConstructorArgsCount];
+        constructorArgs[field.ConstructorArg] = value;
       }
 
       // create object
@@ -219,7 +243,11 @@ namespace BrokenEvent.NanoSerializer
         PropertyWrapper property = wrapper.Properties[i];
 
         // should be already loaded at this time
-        if (property.ConstructorArg != -1)
+        if (property.ConstructorArg != -1 && property.State != NanoState.SerializeSet)
+          continue;
+
+        if (property.Info.GetMethod.IsPrivate && property.Info.SetMethod.IsPrivate &&
+            (flags & OptimizationFlags.PrivateProperties) == 0)
           continue;
 
         if (property.TypeCategory == TypeCategory.Primitive)
@@ -250,6 +278,10 @@ namespace BrokenEvent.NanoSerializer
       {
         FieldWrapper field = wrapper.Fields[i];
 
+        // should be already loaded at this time
+        if (field.ConstructorArg != -1 && field.State != NanoState.SerializeSet)
+          continue;
+
         if (field.TypeCategory == TypeCategory.Primitive)
         {
           string stringValue = ReadString(data, field.Location, field.Info.Name);
@@ -272,7 +304,7 @@ namespace BrokenEvent.NanoSerializer
     private static string ReadString(IDataAdapter data, NanoLocation location, string name)
     {
       if (location == NanoLocation.Attribute)
-        return data.GetAttribute(name, false);
+        return data.GetAttribute(name);
 
       IDataAdapter e = data.GetChild(name);
       return e?.Value;
@@ -359,7 +391,7 @@ namespace BrokenEvent.NanoSerializer
       if (category == TypeCategory.Array)
       {
         Type elementType = type.GetElementType();
-        int[] lengths = new int[int.Parse(data.GetAttribute(ATTRIBUTE_ARRAY_RANK, true))];
+        int[] lengths = new int[int.Parse(data.GetSystemAttribute(ATTRIBUTE_ARRAY_RANK))];
         ScanArrayRanks(data, lengths, 0);
 
         Array array;

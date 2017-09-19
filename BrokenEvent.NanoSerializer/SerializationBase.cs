@@ -42,6 +42,7 @@ namespace BrokenEvent.NanoSerializer
     {
       NoContainers = 1 << 0,
       NoReferences = 1 << 1,
+      PrivateProperties = 1 << 2,
     }
 
     protected struct Tuple<T1, T2>

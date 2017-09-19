@@ -43,6 +43,18 @@ namespace BrokenEvent.NanoSerializer.Tests
       public string D { get { return "!!!"; } }
 
       public static int E = 999;
+
+      private string F { get; set; }
+
+      public string GetPrivate()
+      {
+        return F;
+      }
+
+      public void SetPrivate(string value)
+      {
+        F = value;
+      }
     }
 
     [Test]
@@ -54,6 +66,7 @@ namespace BrokenEvent.NanoSerializer.Tests
         B = "testString",
         C = NanoState.Ignore
       };
+      a.SetPrivate("private");
 
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
@@ -69,6 +82,39 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
+      Assert.IsNull(b.GetPrivate());
+    }
+
+    [Test]
+    public void ThreeAttrsPrivate()
+    {
+      ThreeAttrsTestClass a = new ThreeAttrsTestClass
+      {
+        A = 123,
+        B = "testString",
+        C = NanoState.Ignore
+      };
+      a.SetPrivate("private");
+
+      XmlDocument target = new XmlDocument();
+      SerializationSettings settings = new SerializationSettings();
+      settings.SerializePrivateProperties = true;
+      Serializer serializer = new Serializer(settings);
+      serializer.SerializeObject((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(5, target.DocumentElement.Attributes.Count);
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
+      Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
+      Assert.AreEqual("private", target.DocumentElement.GetAttribute("F"));
+
+      ThreeAttrsTestClass b = Deserializer.Deserialize<ThreeAttrsTestClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.AreEqual(a.B, b.B);
+      Assert.AreEqual(a.C, b.C);
+      Assert.AreEqual(a.GetPrivate(), b.GetPrivate());
     }
 
     private class ThreeAttrsTestStruct
@@ -860,6 +906,57 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       Assert.AreEqual(a.A, b.A);
       Assert.IsNull(b.B);
-    }    
+    }
+
+    public class SerializeSetClass
+    {
+      private string a;
+      private string b;
+      [NanoSerialization(ConstructorArg = 1)]
+      public readonly string c;
+
+      public string A
+      {
+        get { return a; }
+      }
+
+      [NanoSerialization(ConstructorArg = 0, State = NanoState.SerializeSet)]
+      public string B
+      {
+        get { return b; }
+        set
+        {
+          b = value;
+          a = value;
+        }
+      }
+
+      public SerializeSetClass(string a, string c)
+      {
+        this.a = a;
+        this.c = c;
+      }
+    }
+
+    [Test]
+    public void SerializeSet()
+    {
+      SerializeSetClass a = new SerializeSetClass("test__", "test1");
+      a.B = "test2";
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
+      Assert.IsEmpty(target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("test2", target.DocumentElement.GetAttribute("B"));
+      Assert.AreEqual("test1", target.DocumentElement.GetAttribute("c"));
+
+      SerializeSetClass b = Deserializer.Deserialize<SerializeSetClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.AreEqual(a.B, b.B);
+      Assert.AreEqual(a.c, b.c);
+    }
   }
 }

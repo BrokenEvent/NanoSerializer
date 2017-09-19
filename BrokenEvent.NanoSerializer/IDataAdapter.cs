@@ -8,12 +8,22 @@ namespace BrokenEvent.NanoSerializer
   public interface IDataAdapter
   {
     /// <summary>
-    /// Add attribute. Should add subelement if attributes are unavailable.
+    /// Add a system attribute for internal serializer data. Should add subelement if attributes are unavailable.
     /// </summary>
     /// <param name="name">Name of attribute</param>
     /// <param name="value">Value of attribute</param>
-    /// <param name="isSystem">True if this is internal NanoSerializer attribute and false if regular data</param>
-    void AddAttribute(string name, string value, bool isSystem);
+    /// <remarks>This method will be used to use internal serializer helper data while the <see cref="AddAttribute"/> will be used
+    /// for regular data. Adapter may implement different mechanisms to avoid name collisions with regular data.</remarks>
+    void AddSystemAttribute(string name, string value);
+
+    /// <summary>
+    /// Add attribute for regular data. Should add subelement if attributes are unavailable.
+    /// </summary>
+    /// <param name="name">Name of attribute</param>
+    /// <param name="value">Value of attribute</param>
+    /// <remarks>This method will be used for regular serialized objects data while the <see cref="AddSystemAttribute"/> will be used
+    /// for serializer helper data. Adapter may implement different mechanisms to avoid name collisions with system data.</remarks>
+    void AddAttribute(string name, string value);
 
     /// <summary>
     /// Gets or sets text value of this data element.
@@ -21,12 +31,22 @@ namespace BrokenEvent.NanoSerializer
     string Value { get; set; }
 
     /// <summary>
-    /// Gets the attribute value by name. Should return subelement if attributes are unavailable.
+    /// Gets the system attribute (saved with <see cref="AddSystemAttribute"/>) value by name. Should return subelemebt if attributes are unavailable.
     /// </summary>
     /// <param name="name">Name of the attribute to get</param>
-    /// <param name="isSystem">True if this is internal NanoSerializer attribute and false if regular data</param>
     /// <returns>Text value of the attribute or subelement. Null if no attribute with this name found</returns>
-    string GetAttribute(string name, bool isSystem);
+    /// <remarks>This method is used to get system data while <see cref="GetAttribute"/> used to get regular serialized object's data.
+    /// Adapter may implement different mechanisms to avoid name collisions with regular data.</remarks>
+    string GetSystemAttribute(string name);
+
+    /// <summary>
+    /// Gets the attribute (saved with <see cref="AddAttribute"/>) value by name. Should return subelement if attributes are unavailable.
+    /// </summary>
+    /// <param name="name">Name of the attribute to get</param>
+    /// <returns>Text value of the attribute or subelement. Null if no attribute with this name found</returns>
+    /// <remarks>This method is used to get regular data while <see cref="GetSystemAttribute"/> used to get system serializer data.
+    /// Adapter may implement different mechanisms to avoid name collisions with system data.</remarks>
+    string GetAttribute(string name);
 
     /// <summary>
     /// Gets the child element by name.

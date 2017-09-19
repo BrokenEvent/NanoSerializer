@@ -12,7 +12,12 @@ namespace BrokenEvent.NanoSerializer.Tests
       this.element = element;
     }
 
-    public void AddAttribute(string name, string value, bool isSystem)
+    public void AddSystemAttribute(string name, string value)
+    {
+      AddAttribute(name, value);
+    }
+
+    public void AddAttribute(string name, string value)
     {
       element.Attributes.Append(element.OwnerDocument.CreateAttribute(name)).Value = value;
     }
@@ -23,7 +28,12 @@ namespace BrokenEvent.NanoSerializer.Tests
       set { element.InnerText = value; }
     }
 
-    public string GetAttribute(string name, bool isSystem)
+    public string GetSystemAttribute(string name)
+    {
+      return GetAttribute(name);
+    }
+
+    public string GetAttribute(string name)
     {
       string result = element.GetAttribute(name);
       return string.IsNullOrWhiteSpace(result) ? null : result;
