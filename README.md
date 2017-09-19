@@ -4,7 +4,7 @@
 # NanoSerializer
 Carrier-independent serializer-deserializer dedicated to minimum user code restrictions.
 
-# Features
+## Features
 
 * Custom constructors support. Serialized classes don't require parameterless constructors to be deserialized.
 * Cycles unwind. Objects can reference each other and their data will not be duplicated even if two objects reference single another object.
