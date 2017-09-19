@@ -9,7 +9,7 @@ namespace BrokenEvent.NanoSerializer
   /// <summary>
   /// Core class for NanoSerializer serialization.
   /// </summary>
-  public sealed class Serializer: SerializationBase
+  public sealed class Serializer: SerializationBase, ISubSerializer
   {
     private struct Info
     {
@@ -117,6 +117,12 @@ namespace BrokenEvent.NanoSerializer
       objectsCache.Add(target, maxObjId++);
       TypeWrapper wrapper = TypeCache.GetWrapper(target.GetType());
 
+      if (wrapper.IsSelfSerializable)
+      {
+        ((INanoSerializable)target).Serialize(data, this);
+        return;
+      }
+
       for (int i = 0; i < wrapper.Properties.Count; i++)
       {
         PropertyWrapper property = wrapper.Properties[i];
@@ -176,33 +182,41 @@ namespace BrokenEvent.NanoSerializer
 
       IDataAdapter subNode = data.AddChild(info.Name);
 
+      SerializeSubValue(type, value, subNode, info.GenericArgs);
+    }
+
+    private void SerializeSubValue(Type type, object value, IDataAdapter data, Type[] genericArgs)
+    {
       int objId;
       if (objectsCache.TryGetValue(value, out objId))
       {
-        subNode.AddSystemAttribute(ATTRIBUTE_OBJID, objId.ToString());
+        data.AddSystemAttribute(ATTRIBUTE_OBJID, objId.ToString());
         haveReferences = true;
         return;
       }
 
-      TypeCategory category = info.Category;
       Type targetType = value.GetType();
       if (targetType != type)
       {
-        subNode.AddSystemAttribute(ATTRIBUTE_TYPE, TypeCache.GetTypeFullName(targetType, settings.AssemblyQualifiedNames));
+        data.AddSystemAttribute(ATTRIBUTE_TYPE, TypeCache.GetTypeFullName(targetType, settings.AssemblyQualifiedNames));
         type = targetType;
-
-        category = GetTypeCategory(type);
-        if (category == TypeCategory.Primitive)
-        {
-          subNode.Value = value.ToString();
-          return;
-        }
+        genericArgs = type.GetGenericArguments();
       }
 
-      if (SerializeContainer(value, subNode, info))
-        return;
+      TypeCategory category = GetTypeCategory(type);
 
-      SerializeValue(subNode, value);
+      switch (category)
+      {
+        case TypeCategory.Primitive:
+          data.Value = value.ToString();
+          break;
+        case TypeCategory.Unknown:
+          SerializeValue(data, value);
+          break;
+        default:
+          SerializeContainer(value, data, category, genericArgs);
+          break;
+      }
     }
 
     private void SerializeContainer(IEnumerable e, Type elementType, IDataAdapter data)
@@ -230,10 +244,9 @@ namespace BrokenEvent.NanoSerializer
         }
     }
 
-    private bool SerializeContainer(object value, IDataAdapter data, Info info)
+    private void SerializeContainer(object value, IDataAdapter data, TypeCategory category, Type[] genericArgs)
     {
       Type type = value.GetType();
-      TypeCategory category = info.Category;
 
       // arrays
       if (category == TypeCategory.Array)
@@ -246,16 +259,16 @@ namespace BrokenEvent.NanoSerializer
         data.AddSystemAttribute(ATTRIBUTE_ARRAY_RANK, array.Rank.ToString());
 
         haveContainers = true;
-        return true;
+        return;
       }
 
       // dictionaries
       if (category == TypeCategory.IDictionary)
       {
-        Type keyType = info.GenericArgs[0];
-        Type valueType = info.GenericArgs[1];
-        Info keyInfo = new Info(settings.DictionaryKeyName, NanoLocation.SubNode, info.GenericArgs[0]);
-        Info valueInfo = new Info(settings.DictionaryValueName, NanoLocation.SubNode, info.GenericArgs[1]);
+        Type keyType = genericArgs[0];
+        Type valueType = genericArgs[1];
+        Info keyInfo = new Info(settings.DictionaryKeyName, NanoLocation.SubNode, genericArgs[0]);
+        Info valueInfo = new Info(settings.DictionaryValueName, NanoLocation.SubNode, genericArgs[1]);
 
         Func<object, object> getKeyFunc = null;
         Func<object, object> getValueFunc = null;
@@ -283,7 +296,7 @@ namespace BrokenEvent.NanoSerializer
         }
         haveContainers = true;
 
-        return true;
+        return;
       }
 
       // generics
@@ -293,8 +306,8 @@ namespace BrokenEvent.NanoSerializer
           category == TypeCategory.GenericStack ||
           category == TypeCategory.LinkedList)
       {
-        SerializeContainer((IEnumerable)value, info.GenericArgs[0], data);
-        return true;
+        SerializeContainer((IEnumerable)value, genericArgs[0], data);
+        return;
       }
 
       // non-generic versions
@@ -303,10 +316,17 @@ namespace BrokenEvent.NanoSerializer
           category == TypeCategory.Stack)
       {
         SerializeContainer((IEnumerable)value, typeof(object), data);
-        return true;
+        return;
       }
-
-      return false;
     }
+
+    #region ISubSerializer
+
+    void ISubSerializer.ContinueSerialization(Type type, object value, IDataAdapter data)
+    {
+      SerializeSubValue(type, value, data, type.GetGenericArguments());
+    }
+
+    #endregion
   }
 }

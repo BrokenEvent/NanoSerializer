@@ -908,7 +908,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.IsNull(b.B);
     }
 
-    public class SerializeSetClass
+    private class SerializeSetClass
     {
       private string a;
       private string b;
@@ -957,6 +957,47 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.c, b.c);
+    }
+
+    private class NanoSerializableClass: INanoSerializable
+    {
+      public string A { get; set; }
+      public object B { get; set; }
+
+      void INanoSerializable.Serialize(IDataAdapter data, ISubSerializer subSerializer)
+      {
+        data.AddAttribute("1", A);
+        subSerializer.ContinueSerialization(typeof(object), B, data.AddChild("1").AddChild("2"));
+      }
+
+      void INanoSerializable.Deserialize(IDataAdapter data, ISubDeserializer subDeserializer)
+      {
+        A = data.GetAttribute("1");
+
+        object b = null;
+        subDeserializer.ContinueDeserialization(typeof(object), data.GetChild("1").GetChild("2"), ref b);
+        B = b;
+      }
+    }
+
+    [Test]
+    public void NanoSerializable()
+    {
+      NanoSerializableClass a = new NanoSerializableClass
+      {
+        A = "test",
+        B = new ThreeAttrsTestClass { A = 3, B = "test2", C = NanoState.Ignore }
+      };
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      NanoSerializableClass b = Deserializer.Deserialize<NanoSerializableClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.AreEqual(((ThreeAttrsTestClass)a.B).A, ((ThreeAttrsTestClass)b.B).A);
+      Assert.AreEqual(((ThreeAttrsTestClass)a.B).B, ((ThreeAttrsTestClass)b.B).B);
+      Assert.AreEqual(((ThreeAttrsTestClass)a.B).C, ((ThreeAttrsTestClass)b.B).C);
     }
   }
 }

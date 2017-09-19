@@ -6,26 +6,29 @@ namespace BrokenEvent.NanoSerializer.Caching
 {
   internal class TypeWrapper
   {
-    private readonly Type type;
-    private readonly List<PropertyWrapper> properties = new List<PropertyWrapper>();
-    private readonly List<FieldWrapper> fields = new List<FieldWrapper>();
-    private readonly string[] constructorArgNames;
-    private readonly int constructorArgsCount;
+    public readonly Type Type;
+    public readonly List<PropertyWrapper> Properties = new List<PropertyWrapper>();
+    public readonly List<FieldWrapper> Fields = new List<FieldWrapper>();
+    public readonly string[] ConstructorArgNames;
+    public readonly int ConstructorArgsCount;
     private readonly Func<object[], object> createFunc;
+    public readonly bool IsSelfSerializable;
     
     public TypeWrapper(Type type)
     {
-      this.type = type;
+      Type = type;
       int maxArgIndex = -1;
 
       UpdateFields(ref maxArgIndex);
       UpdateProperties(ref maxArgIndex);
-      createFunc = UpdateConstructors(maxArgIndex, out constructorArgsCount, out constructorArgNames);
+      createFunc = UpdateConstructors(maxArgIndex, out ConstructorArgsCount, out ConstructorArgNames);
+
+      IsSelfSerializable = SerializationBase.HaveInterface(type, typeof(INanoSerializable));
     }
 
     private void UpdateFields(ref int maxArgIndex)
     {
-      foreach (FieldInfo info in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
+      foreach (FieldInfo info in Type.GetFields(BindingFlags.Instance | BindingFlags.Public))
       {
         NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
 
@@ -43,13 +46,14 @@ namespace BrokenEvent.NanoSerializer.Caching
           if (constructorArg > maxArgIndex)
             maxArgIndex = constructorArg;
         }
-        fields.Add(new FieldWrapper(type, info, location, state, constructorArg));
+
+        Fields.Add(new FieldWrapper(Type, info, location, state, constructorArg));
       }
     }
 
     private void UpdateProperties(ref int maxArgIndex)
     {
-      foreach (PropertyInfo info in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+      foreach (PropertyInfo info in Type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
       {
         if (!info.CanRead)
           continue;
@@ -77,7 +81,7 @@ namespace BrokenEvent.NanoSerializer.Caching
           state = attr.State;
         }
 
-        properties.Add(new PropertyWrapper(type, info, location, state, constructorArg));
+        Properties.Add(new PropertyWrapper(Type, info, location, state, constructorArg));
       }
     }
 
@@ -134,10 +138,10 @@ namespace BrokenEvent.NanoSerializer.Caching
       if (maxArgIndex > -1)
       {
         args = new MemberWrapper[maxArgIndex + 1];
-        foreach (PropertyWrapper wrapper in properties)
+        foreach (PropertyWrapper wrapper in Properties)
           if (wrapper.ConstructorArg != -1)
             args[wrapper.ConstructorArg] = wrapper;
-        foreach (FieldWrapper wrapper in fields)
+        foreach (FieldWrapper wrapper in Fields)
           if (wrapper.ConstructorArg != -1)
             args[wrapper.ConstructorArg] = wrapper;
       }
@@ -147,7 +151,7 @@ namespace BrokenEvent.NanoSerializer.Caching
       float bestCtorScore = -1;
       ParameterInfo[] bestCtorParameterInfos = null;
 
-      foreach (ConstructorInfo info in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+      foreach (ConstructorInfo info in Type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
       {
         ParameterInfo[] parameterInfos = null;
         string[] names = null;
@@ -163,30 +167,10 @@ namespace BrokenEvent.NanoSerializer.Caching
       }
 
       if (bestCtor == null)
-        throw new SerializationException($"Unable to get best constructor for {type.FullName}");
+        throw new SerializationException($"Unable to get best constructor for {Type.FullName}");
 
       argsCount = bestCtorParameterInfos.Length;
-      return InvocationHelper.CreateConstructorDelegate(type, bestCtor, bestCtorParameterInfos);
-    }
-
-    public IList<PropertyWrapper> Properties
-    {
-      get { return properties; }
-    }
-
-    public IList<FieldWrapper> Fields
-    {
-      get { return fields; }
-    }
-
-    public string[] ConstructorArgNames
-    {
-      get { return constructorArgNames; }
-    }
-
-    public int ConstructorArgsCount
-    {
-      get { return constructorArgsCount; }
+      return InvocationHelper.CreateConstructorDelegate(Type, bestCtor, bestCtorParameterInfos);
     }
 
     public object CreateObject(object[] args)

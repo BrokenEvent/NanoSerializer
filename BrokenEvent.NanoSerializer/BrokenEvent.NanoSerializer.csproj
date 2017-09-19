@@ -44,7 +44,10 @@
     <Compile Include="Caching\TypeWrapper.cs" />
     <Compile Include="Deserializer.cs" />
     <Compile Include="IDataAdapter.cs" />
+    <Compile Include="INanoSerializable.cs" />
     <Compile Include="InvocationHelper.cs" />
+    <Compile Include="ISubDeserializer.cs" />
+    <Compile Include="ISubSerializer.cs" />
     <Compile Include="NanoArgAttribute.cs" />
     <Compile Include="NanoLocation.cs" />
     <Compile Include="NanoSerializationAttribute.cs" />

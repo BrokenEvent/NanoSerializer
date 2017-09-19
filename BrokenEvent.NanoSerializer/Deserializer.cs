@@ -8,7 +8,7 @@ namespace BrokenEvent.NanoSerializer
   /// <summary>
   /// Core class for NanoSerializer deserialization.
   /// </summary>
-  public sealed class Deserializer: SerializationBase
+  public sealed class Deserializer: SerializationBase, ISubDeserializer
   {
     /// <summary>
     /// The delegate using in type resolve process.
@@ -237,6 +237,12 @@ namespace BrokenEvent.NanoSerializer
 
     private void FillObject(TypeWrapper wrapper, object target, IDataAdapter data)
     {
+      if (wrapper.IsSelfSerializable)
+      {
+        ((INanoSerializable)target).Deserialize(data, this);
+        return;
+      }
+
       // read properties
       for (int i = 0; i < wrapper.Properties.Count; i++)
       {
@@ -468,5 +474,14 @@ namespace BrokenEvent.NanoSerializer
             );
       }
     }
+
+    #region ISubDeserializer
+
+    void ISubDeserializer.ContinueDeserialization(Type targetType, IDataAdapter data, ref object value)
+    {
+      value = DeserializeObject(targetType, data, value);
+    }
+
+    #endregion
   }
 }
