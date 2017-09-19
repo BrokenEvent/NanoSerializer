@@ -88,7 +88,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       ConstructorInfo ctor = typeof(Test).GetConstructor(Type.EmptyTypes);
 
       ConstructorInfo ctorString = typeof(Test).GetConstructor(new Type[]{typeof(string)});
-      Func<object[], object> actionCreateEmitString = InvocationHelper.CreateConstructorDelegate(typeof(Test), ctorString);
+      Func<object[], object> actionCreateEmitString = InvocationHelper.CreateConstructorDelegate(typeof(Test), ctorString, ctorString.GetParameters());
 
       Console.ForegroundColor = ConsoleColor.Cyan;
       Console.WriteLine("Performance test: Property set...");
@@ -109,7 +109,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       stopwatch.Stop();
       WriteTestFinish(stopwatch);
 
-      WriteTestStart("InvocationHelper.GetSetDelegate");
+      WriteTestStart("InvocationHelper.CreateSetDelegate");
       stopwatch.Restart();
       for (int i = 0; i < ITERATIONS; i++)
         action(test, TEST);

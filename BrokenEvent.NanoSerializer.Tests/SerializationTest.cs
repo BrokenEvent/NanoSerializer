@@ -117,7 +117,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.GetPrivate(), b.GetPrivate());
     }
 
-    private class ThreeAttrsTestStruct
+    public struct ThreeAttrsTestStruct
     {
       public int A;
       public string B { get; set; }
@@ -144,6 +144,45 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
 
       ThreeAttrsTestStruct b = Deserializer.Deserialize<ThreeAttrsTestStruct>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.AreEqual(a.B, b.B);
+      Assert.AreEqual(a.C, b.C);
+    }
+
+    private struct ThreeAttrsTestStructCtor
+    {
+      public ThreeAttrsTestStructCtor(int a): this()
+      {
+        A = a;
+      }
+
+      [NanoSerialization(ConstructorArg = 0)]
+      public int A;
+
+      public string B { get; set; }
+      public NanoState C { get; set; }
+    }
+
+    [Test]
+    public void ThreeAttrsStructCtor()
+    {
+      ThreeAttrsTestStructCtor a = new ThreeAttrsTestStructCtor(123)
+      {
+        B = "testString",
+        C = NanoState.Ignore
+      };
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(4, target.DocumentElement.Attributes.Count);
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
+      Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
+
+      ThreeAttrsTestStructCtor b = Deserializer.Deserialize<ThreeAttrsTestStructCtor>((SystemXmlAdapter)target);
 
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);

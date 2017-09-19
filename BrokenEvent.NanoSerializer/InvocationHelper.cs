@@ -6,134 +6,10 @@ namespace BrokenEvent.NanoSerializer
 {
   internal static class InvocationHelper
   {
-    private static readonly MethodInfo genericSetHelper1;
-    private static readonly MethodInfo genericSetHelper2;
-    private static readonly MethodInfo genericGetHelper;
-    private static readonly MethodInfo genericGetStructHelper;
-    private static readonly MethodInfo genericGetSetHelper;
-
-    static InvocationHelper()
-    {
-      genericSetHelper1 = typeof(InvocationHelper).GetMethod(nameof(GenericSetHelper1), BindingFlags.Static | BindingFlags.NonPublic);
-      genericSetHelper2 = typeof(InvocationHelper).GetMethod(nameof(GenericSetHelper2), BindingFlags.Static | BindingFlags.NonPublic);
-      genericGetHelper = typeof(InvocationHelper).GetMethod(nameof(GenericGetHelper), BindingFlags.Static | BindingFlags.NonPublic);
-      genericGetStructHelper = typeof(InvocationHelper).GetMethod(nameof(GenericGetStructHelper), BindingFlags.Static | BindingFlags.NonPublic);
-      genericGetSetHelper = typeof(InvocationHelper).GetMethod(nameof(GenericGetSetHelper), BindingFlags.Static | BindingFlags.NonPublic);
-    }
-
     // it is not thread safe even without this
-    private static object[] argsCache1 = new object[1];
     private static Type[] typeCache1 = new Type[1];
     private static Type[] typeCache2 = new Type[2];
     private static Type[] typeCache3 = new Type[3];
-
-    private static Action<object, object> GenericSetHelper1<TTarget, TArg>(MethodInfo info)
-    {
-      Action<TTarget, TArg> action = (Action<TTarget, TArg>)Delegate.CreateDelegate(typeof(Action<TTarget, TArg>), info);
-      return (target, arg) => action((TTarget)target, (TArg)arg);
-    }
-
-    private static Action<object, object, object> GenericSetHelper2<TTarget, TArg1, TArg2>(MethodInfo info)
-    {
-      Action<TTarget, TArg1, TArg2> action = (Action<TTarget, TArg1, TArg2>)Delegate.CreateDelegate(typeof(Action<TTarget, TArg1, TArg2>), info);
-      return (target, arg1, arg2) => action((TTarget)target, (TArg1)arg1, (TArg2)arg2);
-    }
-
-    private static Func<object, object> GenericGetHelper<TTarget, TResult>(MethodInfo info)
-    {
-      Func<TTarget, TResult> func = (Func<TTarget, TResult>)Delegate.CreateDelegate(typeof(Func<TTarget, TResult>), info);
-      return target => { return func((TTarget)target); };
-    }
-
-    private delegate TResult FuncRef<TTarget, TResult>(ref TTarget target);
-
-    private static Func<object, object> GenericGetStructHelper<TTarget, TResult>(MethodInfo info)
-    {
-      FuncRef<TTarget, TResult> func = (FuncRef<TTarget, TResult>)Delegate.CreateDelegate(typeof(FuncRef<TTarget, TResult>), info);
-      return target =>
-        {
-          TTarget t = (TTarget)target;
-          return func(ref t);
-        };
-    }
-
-    private static Func<object, object, object> GenericGetSetHelper<TTarget, TArg, TResult>(MethodInfo info)
-    {
-      Func<TTarget, TArg, TResult> func = (Func<TTarget, TArg, TResult>)Delegate.CreateDelegate(typeof(Func<TTarget, TArg, TResult>), info);
-      return (target, arg) => { return func((TTarget)target, (TArg)arg); };
-    }
-
-    public static Action<object, object> CreateSetDelegate(Type type, Type argType, MethodInfo info)
-    {
-      typeCache2[0] = type;
-      typeCache2[1] = argType;
-      MethodInfo actualHelper = genericSetHelper1.MakeGenericMethod(typeCache2);
-      argsCache1[0] = info;
-      return (Action<object, object>)actualHelper.Invoke(null, argsCache1);
-    }
-
-    public static Action<object, object> CreateSetDelegate(Type type, Type argType, string name)
-    {
-      typeCache1[0] = argType;
-      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache1, null);
-
-      typeCache2[0] = type;
-      typeCache2[1] = argType;
-      MethodInfo actualHelper = genericSetHelper1.MakeGenericMethod(typeCache2);
-      argsCache1[0] = info;
-      return (Action<object, object>)actualHelper.Invoke(null, argsCache1);
-    }
-
-    public static Action<object, object, object> CreateSetDelegate(Type type, Type arg1Type, Type arg2Type, string name)
-    {
-      typeCache2[0] = arg1Type;
-      typeCache2[1] = arg2Type;
-      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache2, null);
-
-      typeCache3[0] = type;
-      typeCache3[1] = arg1Type;
-      typeCache3[2] = arg2Type;
-
-      MethodInfo actualHelper = genericSetHelper2.MakeGenericMethod(typeCache3);
-      argsCache1[0] = info;
-      return (Action<object, object, object>)actualHelper.Invoke(null, argsCache1);
-    }
-
-    public static Func<object, object> CreateGetDelegate(Type type, Type resultType, MethodInfo info)
-    {
-      typeCache2[0] = type;
-      typeCache2[1] = resultType;
-      MethodInfo actualHelper;
-      if (type.IsClass)
-        actualHelper = genericGetHelper.MakeGenericMethod(typeCache2);
-      else
-        actualHelper = genericGetStructHelper.MakeGenericMethod(typeCache2);
-
-      argsCache1[0] = info;
-      return (Func<object, object>)actualHelper.Invoke(null, argsCache1);
-    }
-
-    public static Func<object, object, object> CreateGetSetDelegate(Type type, Type argType, Type resultType, string name)
-    {
-      typeCache1[0] = argType;
-      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache1, null);
-
-      typeCache3[0] = type;
-      typeCache3[1] = argType;
-      typeCache3[2] = resultType;
-      MethodInfo actualHelper = genericGetSetHelper.MakeGenericMethod(typeCache3);
-      argsCache1[0] = info;
-      return (Func<object, object, object>)actualHelper.Invoke(null, argsCache1);
-    }
-
-    public static Func<object> CreateConstructorDelegate(Type type)
-    {
-      DynamicMethod method = new DynamicMethod("_create__" + type.AssemblyQualifiedName, type, null, typeof(InvocationHelper));
-      ILGenerator ilGenerator = method.GetILGenerator();
-      ilGenerator.Emit(OpCodes.Newobj, type.GetConstructor(Type.EmptyTypes));
-      ilGenerator.Emit(OpCodes.Ret);
-      return (Func<object>)method.CreateDelegate(typeof(Func<object>));
-    }
 
     private static void EmitLdc(ILGenerator il, int index)
     {
@@ -154,29 +30,196 @@ namespace BrokenEvent.NanoSerializer
       }
     }
 
-    public static Func<object[], object> CreateConstructorDelegate(Type type, ConstructorInfo ctor, ParameterInfo[] parameterInfos = null)
+    private static Type GetOwnerType(Type type)
     {
-      if (parameterInfos == null)
-        parameterInfos = ctor.GetParameters();
+      if (type.Assembly.GetName().Name == "mscorlib")
+        return typeof(InvocationHelper);
+      return type;
+    }
 
-      typeCache1[0] = typeof(object[]);
+    public static Action<object, object> CreateSetDelegate(Type type, Type argType, string name)
+    {
+      typeCache1[0] = argType;
+      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache1, null);
+      return CreateSetDelegate(type, argType, info);
+    }
 
-      DynamicMethod method = new DynamicMethod("_create2__" + type.AssemblyQualifiedName, type, typeCache1, type);
+    public static Action<object, object> CreateSetDelegate(Type type, Type argType, MethodInfo info)
+    {
+      typeCache2[0] = typeof(object);
+      typeCache2[1] = typeof(object);
+      DynamicMethod method = new DynamicMethod("_call__" + type.FullName + "_" + info.Name, null, typeCache2, GetOwnerType(type));
       ILGenerator ilGenerator = method.GetILGenerator();
 
-      for (int i = 0; i < parameterInfos.Length; i++)
-      {
-        ilGenerator.Emit(OpCodes.Ldarg_0);
-        EmitLdc(ilGenerator, i);
-        ilGenerator.Emit(OpCodes.Ldelem_Ref);
+      ilGenerator.Emit(OpCodes.Ldarg_0);
+      if (type.IsValueType)
+        ilGenerator.Emit(OpCodes.Unbox, type);
+      else
+        ilGenerator.Emit(OpCodes.Castclass, type);
 
-        if (parameterInfos[i].ParameterType.IsClass)
-          ilGenerator.Emit(OpCodes.Castclass, parameterInfos[i].ParameterType);
-        else
-          ilGenerator.Emit(OpCodes.Unbox_Any, parameterInfos[i].ParameterType);
+      ilGenerator.Emit(OpCodes.Ldarg_1);
+      if (argType.IsValueType)
+        ilGenerator.Emit(OpCodes.Unbox_Any, argType);
+      else
+        ilGenerator.Emit(OpCodes.Castclass, argType);
+
+      ilGenerator.Emit(OpCodes.Call, info);
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Action<object, object>)method.CreateDelegate(typeof(Action<object, object>));
+    }
+
+    public static Action<object, object, object> CreateSetDelegate(Type type, Type arg1Type, Type arg2Type, string name)
+    {
+      typeCache2[0] = arg1Type;
+      typeCache2[1] = arg2Type;
+      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache2, null);
+      return CreateSetDelegate(type, arg1Type, arg2Type, info);
+    }
+
+    public static Action<object, object, object> CreateSetDelegate(Type type, Type arg1Type, Type arg2Type, MethodInfo info)
+    {
+      typeCache3[0] = typeof(object);
+      typeCache3[1] = typeof(object);
+      typeCache3[2] = typeof(object);
+      DynamicMethod method = new DynamicMethod("_call__" + type.FullName + "_" + info.Name, null, typeCache3, GetOwnerType(type));
+      ILGenerator ilGenerator = method.GetILGenerator();
+
+      ilGenerator.Emit(OpCodes.Ldarg_0);
+      if (type.IsValueType)
+        ilGenerator.Emit(OpCodes.Unbox, type);
+      else
+        ilGenerator.Emit(OpCodes.Castclass, type);
+
+      ilGenerator.Emit(OpCodes.Ldarg_1);
+
+      if (arg1Type.IsValueType)
+        ilGenerator.Emit(OpCodes.Unbox_Any, arg1Type);
+      else
+        ilGenerator.Emit(OpCodes.Castclass, arg1Type);
+
+      ilGenerator.Emit(OpCodes.Ldarg_2);
+
+      if (arg2Type.IsValueType)
+        ilGenerator.Emit(OpCodes.Unbox_Any, arg2Type);
+      else
+        ilGenerator.Emit(OpCodes.Castclass, arg2Type);
+
+      ilGenerator.Emit(OpCodes.Call, info);
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Action<object, object, object>)method.CreateDelegate(typeof(Action<object, object, object>));
+    }
+
+    public static Func<object, object> CreateGetDelegate(Type type, Type resultType, MethodInfo info)
+    {
+      typeCache1[0] = typeof(object);
+      DynamicMethod method = new DynamicMethod("_get__" + type.FullName + "_" + info.Name, typeof(object), typeCache1, GetOwnerType(type));
+      ILGenerator ilGenerator = method.GetILGenerator();
+
+      ilGenerator.Emit(OpCodes.Ldarg_0);
+      if (!type.IsValueType)
+        ilGenerator.Emit(OpCodes.Castclass, type);
+      else
+        ilGenerator.Emit(OpCodes.Unbox, type);
+
+      ilGenerator.Emit(OpCodes.Callvirt, info);
+
+      if (resultType.IsValueType)
+        ilGenerator.Emit(OpCodes.Box, resultType);
+
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Func<object, object>)method.CreateDelegate(typeof(Func<object, object>));
+    }
+
+    public static Func<object, object, object> CreateGetSetDelegate(Type type, Type argType, Type resultType, string name)
+    {
+      typeCache1[0] = argType;
+      MethodInfo info = type.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, typeCache1, null);
+      return CreateGetSetDelegate(type, argType, resultType, info);
+    }
+
+    public static Func<object, object, object> CreateGetSetDelegate(Type type, Type argType, Type resultType, MethodInfo info)
+    {
+      typeCache2[0] = typeof(object);
+      typeCache2[1] = typeof(object);
+      DynamicMethod method = new DynamicMethod("_get__" + type.FullName + "_" + info.Name, typeof(object), typeCache2, GetOwnerType(type));
+      ILGenerator ilGenerator = method.GetILGenerator();
+
+      ilGenerator.Emit(OpCodes.Ldarg_0);
+      if (!type.IsValueType)
+        ilGenerator.Emit(OpCodes.Castclass, type);
+      else
+        ilGenerator.Emit(OpCodes.Unbox, type);
+
+      ilGenerator.Emit(OpCodes.Ldarg_1);
+      if (argType.IsValueType)
+        ilGenerator.Emit(OpCodes.Unbox_Any, argType);
+      else
+        ilGenerator.Emit(OpCodes.Castclass, argType);
+
+      ilGenerator.Emit(OpCodes.Callvirt, info);
+
+      if (resultType.IsValueType)
+        ilGenerator.Emit(OpCodes.Box, resultType);
+
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Func<object, object, object>)method.CreateDelegate(typeof(Func<object, object, object>));
+    }
+
+    public static Func<object> CreateConstructorDelegate(Type type)
+    {
+      DynamicMethod method = new DynamicMethod("_create__" + type.FullName, type, null, GetOwnerType(type));
+      ILGenerator ilGenerator = method.GetILGenerator();
+
+      if (type.IsClass)
+        ilGenerator.Emit(OpCodes.Newobj, type.GetConstructor(Type.EmptyTypes));
+      else
+      {
+        ilGenerator.Emit(OpCodes.Initobj, type);
+        ilGenerator.Emit(OpCodes.Box, type);
       }
 
-      ilGenerator.Emit(OpCodes.Newobj, ctor);
+      ilGenerator.Emit(OpCodes.Ret);
+      return (Func<object>)method.CreateDelegate(typeof(Func<object>));
+    }
+
+    public static Func<object[], object> CreateConstructorDelegate(Type type, ConstructorInfo ctor, ParameterInfo[] parameterInfos)
+    {
+      typeCache1[0] = typeof(object[]);
+
+      DynamicMethod method = new DynamicMethod("_create2__" + type.FullName, typeof(object), typeCache1, GetOwnerType(type));
+      ILGenerator ilGenerator = method.GetILGenerator();
+      if (type.IsValueType)
+      {
+        ilGenerator.DeclareLocal(type);
+        ilGenerator.Emit(OpCodes.Ldloca_S, 0);
+      }
+
+      if (parameterInfos != null && parameterInfos.Length > 0)
+        for (int i = 0; i < parameterInfos.Length; i++)
+        {
+          ilGenerator.Emit(OpCodes.Ldarg_0);
+          EmitLdc(ilGenerator, i);
+          ilGenerator.Emit(OpCodes.Ldelem_Ref);
+
+          if (parameterInfos[i].ParameterType.IsValueType)
+            ilGenerator.Emit(OpCodes.Unbox_Any, parameterInfos[i].ParameterType);
+          else
+            ilGenerator.Emit(OpCodes.Castclass, parameterInfos[i].ParameterType);
+        }
+
+      if (type.IsValueType)
+      {
+        if (ctor == null)
+          ilGenerator.Emit(OpCodes.Initobj, type);
+        else
+          ilGenerator.Emit(OpCodes.Call, ctor);
+
+        ilGenerator.Emit(OpCodes.Ldloc_0);
+        ilGenerator.Emit(OpCodes.Box, type);
+      }
+      else
+        ilGenerator.Emit(OpCodes.Newobj, ctor);
+
       ilGenerator.Emit(OpCodes.Ret);
       return (Func<object[], object>)method.CreateDelegate(typeof(Func<object[], object>));
     }
@@ -184,14 +227,17 @@ namespace BrokenEvent.NanoSerializer
     public static Func<object, object> CreateGetFieldDelegate(Type type, FieldInfo field)
     {
       typeCache1[0] = typeof(object);
-      DynamicMethod method = new DynamicMethod("_get__" + type.AssemblyQualifiedName + "_" + field.Name, typeof(object), typeCache1, type);
+      DynamicMethod method = new DynamicMethod("_get__" + type.FullName + "_" + field.Name, typeof(object), typeCache1, GetOwnerType(type));
       ILGenerator ilGenerator = method.GetILGenerator();
 
       ilGenerator.Emit(OpCodes.Ldarg_0);
-      ilGenerator.Emit(OpCodes.Castclass, type);
+      if (!type.IsValueType)
+        ilGenerator.Emit(OpCodes.Castclass, type);
+      else
+        ilGenerator.Emit(OpCodes.Unbox, type);
       ilGenerator.Emit(OpCodes.Ldfld, field);
 
-      if (!field.FieldType.IsClass)
+      if (field.FieldType.IsValueType)
         ilGenerator.Emit(OpCodes.Box, field.FieldType);
 
       ilGenerator.Emit(OpCodes.Ret);
@@ -202,14 +248,17 @@ namespace BrokenEvent.NanoSerializer
     {
       typeCache2[0] = typeof(object);
       typeCache2[1] = typeof(object);
-      DynamicMethod method = new DynamicMethod("_set__" + type.AssemblyQualifiedName + "_" + field.Name, null, typeCache2, type);
+      DynamicMethod method = new DynamicMethod("_set__" + type.FullName + "_" + field.Name, null, typeCache2, GetOwnerType(type));
       ILGenerator ilGenerator = method.GetILGenerator();
 
       ilGenerator.Emit(OpCodes.Ldarg_0);
-      ilGenerator.Emit(OpCodes.Castclass, type);
+      if (!type.IsValueType)
+        ilGenerator.Emit(OpCodes.Castclass, type);
+      else
+        ilGenerator.Emit(OpCodes.Unbox, type);
       ilGenerator.Emit(OpCodes.Ldarg_1);
 
-      if (!field.FieldType.IsClass)
+      if (field.FieldType.IsValueType)
         ilGenerator.Emit(OpCodes.Unbox_Any, field.FieldType);
 
       ilGenerator.Emit(OpCodes.Stfld, field);

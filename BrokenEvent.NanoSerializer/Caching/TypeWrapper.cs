@@ -167,7 +167,14 @@ namespace BrokenEvent.NanoSerializer.Caching
       }
 
       if (bestCtor == null)
+      {
+        if (Type.IsValueType)
+        {
+          argsCount = 0;
+          return InvocationHelper.CreateConstructorDelegate(Type, null, null);
+        }
         throw new SerializationException($"Unable to get best constructor for {Type.FullName}");
+      }
 
       argsCount = bestCtorParameterInfos.Length;
       return InvocationHelper.CreateConstructorDelegate(Type, bestCtor, bestCtorParameterInfos);
