@@ -87,30 +87,20 @@ namespace BrokenEvent.NanoSerializer
       return Type.GetType(name);
     }
 
-    private object CreateObject(TypeWrapper wrapper, Dictionary<int, object> propertyArgs)
+    private object CreateObject(TypeWrapper wrapper, object[] args)
     {
-      object[] args = null;
-
-      if (wrapper.ConstructorArgsCount > 0)
+      if (wrapper.ConstructorArgNames != null)
       {
-        args = new object[wrapper.ConstructorArgsCount];
+        if (args == null)
+          args = new object[wrapper.ConstructorArgsCount];
 
         for (int i = 0; i < args.Length; i++)
         {
           object value;
-          string argName;
-          if (wrapper.ConstructorArgNames.TryGetValue(i, out argName))
-          {
-            if (constructorArgs.TryGetValue(argName, out value))
-            {
-              args[i] = value;
-              continue;
-            }
-          }
-
-          propertyArgs.TryGetValue(i, out value);
-
-          args[i] = value;
+          string argName = wrapper.ConstructorArgNames[i];
+          if (argName != null &&
+              constructorArgs.TryGetValue(argName, out value))
+            args[i] = value;
         }
       }
 
@@ -183,7 +173,8 @@ namespace BrokenEvent.NanoSerializer
       // this is unknown object
       TypeWrapper wrapper = TypeCache.GetWrapper(type);
 
-      Dictionary<int, object> constructorArgs = null;
+      object[] constructorArgs = null;
+
       for (int i = 0; i < wrapper.Properties.Count; i++)
       {
         PropertyWrapper property = wrapper.Properties[i];
@@ -206,8 +197,8 @@ namespace BrokenEvent.NanoSerializer
 
         // TODO can we avoid the temporary dictionary?
         if (constructorArgs == null)
-          constructorArgs = new Dictionary<int, object>();
-        constructorArgs.Add(property.ConstructorArg, value);
+          constructorArgs = new object[wrapper.ConstructorArgsCount];
+        constructorArgs[property.ConstructorArg] = value;
       }
 
       // create object

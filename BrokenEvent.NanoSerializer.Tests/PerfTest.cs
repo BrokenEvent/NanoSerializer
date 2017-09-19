@@ -26,7 +26,7 @@ namespace BrokenEvent.NanoSerializer.Tests
     {
       Console.SetCursorPosition(consoleX, consoleY);
       Console.ForegroundColor = ConsoleColor.White;
-      Console.WriteLine("{0} mTick/call", 1000f * stopwatch.ElapsedTicks / ITERATIONS);
+      Console.WriteLine("{0:.00} mTick/call", 1000f * stopwatch.ElapsedTicks / ITERATIONS);
       Console.ForegroundColor = ConsoleColor.Gray;
     }
 
@@ -249,7 +249,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       stopwatch.Stop();
       WriteTestFinish(stopwatch);
 
-      Console.WriteLine("-- All done.");
+      Console.WriteLine("-- All done. Press <Enter> to continue.");
       Console.WriteLine();
     }
   }  

@@ -9,7 +9,7 @@ namespace BrokenEvent.NanoSerializer.Caching
     private readonly Type type;
     private readonly List<PropertyWrapper> properties = new List<PropertyWrapper>();
     private readonly List<FieldWrapper> fields = new List<FieldWrapper>();
-    private readonly Dictionary<int, string> constructorArgNames;
+    private readonly string[] constructorArgNames;
     private readonly int constructorArgsCount;
     private readonly Func<object[], object> createFunc;
     
@@ -71,7 +71,7 @@ namespace BrokenEvent.NanoSerializer.Caching
       }
     }
 
-    private static float TestConstructor(ConstructorInfo info, PropertyWrapper[] args, Dictionary<int, string> globals, ref ParameterInfo[] parameterInfos)
+    private static float TestConstructor(ConstructorInfo info, PropertyWrapper[] args, ref string[] globals, ref ParameterInfo[] parameterInfos)
     {
       float result = 0;
       parameterInfos = info.GetParameters();
@@ -90,7 +90,9 @@ namespace BrokenEvent.NanoSerializer.Caching
         if (argAttr != null)
         {
           result += okDelta;
-          globals.Add(i, argAttr.ArgName);
+          if (globals == null)
+            globals = new string[parameterInfos.Length];
+          globals[i] = argAttr.ArgName;
           continue;
         }
 
@@ -116,7 +118,7 @@ namespace BrokenEvent.NanoSerializer.Caching
       return result;
     }
 
-    private Func<object[], object> UpdateConstructors(int maxArgIndex, out int argsCount, out Dictionary<int, string> globalArgNames)
+    private Func<object[], object> UpdateConstructors(int maxArgIndex, out int argsCount, out string[] globalArgNames)
     {
       PropertyWrapper[] args = null;
       if (maxArgIndex > -1)
@@ -129,27 +131,21 @@ namespace BrokenEvent.NanoSerializer.Caching
 
       globalArgNames = null;
       ConstructorInfo bestCtor = null;
-      Dictionary<int, string> argNames = new Dictionary<int, string>();
       float bestCtorScore = -1;
       ParameterInfo[] bestCtorParameterInfos = null;
 
       foreach (ConstructorInfo info in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
       {
         ParameterInfo[] parameterInfos = null;
-        int count;
-        if (argNames == null)
-          argNames = new Dictionary<int, string>();
-        else
-          argNames.Clear();
+        string[] names = null;
 
-        float score = TestConstructor(info, args, argNames, ref parameterInfos);
+        float score = TestConstructor(info, args, ref names, ref parameterInfos);
         if (score > bestCtorScore)
         {
           bestCtorScore = score;
           bestCtor = info;
           bestCtorParameterInfos = parameterInfos;
-          globalArgNames = argNames;
-          argNames = null;
+          globalArgNames = names;
         }
       }
 
@@ -170,7 +166,7 @@ namespace BrokenEvent.NanoSerializer.Caching
       get { return fields; }
     }
 
-    public Dictionary<int, string> ConstructorArgNames
+    public string[] ConstructorArgNames
     {
       get { return constructorArgNames; }
     }
