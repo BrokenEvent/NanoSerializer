@@ -10,10 +10,9 @@ namespace BrokenEvent.NanoSerializer
     private static Dictionary<Type, Action<byte[], int, object>> byteWriters = new Dictionary<Type, Action<byte[], int, object>>
     {
       { typeof(bool), (buffer, index, value) => new BytesUnion{BoolValue = (bool)value}.WriteBuffer(buffer, index, sizeof(bool)) },
-      { typeof(byte), (buffer, index, value) => new BytesUnion{ByteValue = (byte)value}.WriteBuffer(buffer, index, sizeof(byte)) },
+      { typeof(byte), (buffer, index, value) => buffer[index] = (byte)value },
       { typeof(sbyte), (buffer, index, value) => new BytesUnion{SByteValue = (sbyte)value}.WriteBuffer(buffer, index, sizeof(sbyte)) },
       { typeof(char), (buffer, index, value) => new BytesUnion{CharValue = (char)value}.WriteBuffer(buffer, index, sizeof(char)) },
-      { typeof(decimal), (buffer, index, value) => new BytesUnion{DecimalValue = (decimal)value}.WriteBuffer(buffer, index, sizeof(decimal)) },
       { typeof(double), (buffer, index, value) => new BytesUnion{DoubleValue = (double)value}.WriteBuffer(buffer, index, sizeof(double)) },
       { typeof(float), (buffer, index, value) => new BytesUnion{FloatValue = (float)value}.WriteBuffer(buffer, index, sizeof(float)) },
       { typeof(int), (buffer, index, value) => new BytesUnion{IntValue = (int)value}.WriteBuffer(buffer, index, sizeof(int)) },
@@ -30,7 +29,6 @@ namespace BrokenEvent.NanoSerializer
       { typeof(byte), (buffer, index) => { BytesUnion bytes = new BytesUnion(); bytes.ReadBuffer(buffer, index, sizeof(byte)); return bytes.ByteValue; } },
       { typeof(sbyte), (buffer, index) => { BytesUnion bytes = new BytesUnion(); bytes.ReadBuffer(buffer, index, sizeof(sbyte)); return bytes.SByteValue; } },
       { typeof(char), (buffer, index) => { BytesUnion bytes = new BytesUnion(); bytes.ReadBuffer(buffer, index, sizeof(char)); return bytes.CharValue; } },
-      { typeof(decimal), (buffer, index) => { BytesUnion bytes = new BytesUnion(); bytes.ReadBuffer(buffer, index, sizeof(decimal)); return bytes.DecimalValue; } },
       { typeof(double), (buffer, index) => { BytesUnion bytes = new BytesUnion(); bytes.ReadBuffer(buffer, index, sizeof(double)); return bytes.DoubleValue; } },
       { typeof(float), (buffer, index) => { BytesUnion bytes = new BytesUnion(); bytes.ReadBuffer(buffer, index, sizeof(float)); return bytes.FloatValue; } },
       { typeof(int), (buffer, index) => { BytesUnion bytes = new BytesUnion(); bytes.ReadBuffer(buffer, index, sizeof(int)); return bytes.IntValue; } },
@@ -46,7 +44,6 @@ namespace BrokenEvent.NanoSerializer
       { typeof(bool), sizeof(bool) },
       { typeof(byte), sizeof(byte) },
       { typeof(sbyte), sizeof(sbyte) },
-      { typeof(decimal), sizeof(decimal) },
       { typeof(char), sizeof(char) },
       { typeof(double), sizeof(double) },
       { typeof(float), sizeof(float) },
@@ -96,8 +93,6 @@ namespace BrokenEvent.NanoSerializer
       public int IntValue;
       [FieldOffset(0)]
       public uint UIntValue;
-      [FieldOffset(0)]
-      public decimal DecimalValue;
       [FieldOffset(0)]
       public float FloatValue;
       [FieldOffset(0)]

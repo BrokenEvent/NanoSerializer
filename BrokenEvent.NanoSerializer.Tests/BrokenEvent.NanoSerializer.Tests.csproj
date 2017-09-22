@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ByteUtilsTest.cs" />
     <Compile Include="ModelClass.cs" />
     <Compile Include="PerfTest.cs" />
     <Compile Include="Program.cs" />
