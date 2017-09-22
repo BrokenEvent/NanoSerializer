@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 using BrokenEvent.NanoSerializer.Caching;
 
@@ -219,11 +220,34 @@ namespace BrokenEvent.NanoSerializer
       }
     }
 
+    [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
     private void SerializeContainer(IEnumerable e, Type elementType, IDataAdapter data)
     {
-      Info info = new Info(settings.ContainerItemName, NanoLocation.SubNode, elementType);
-      foreach (object o in e)
-        SerializeValue(elementType, o, data, info, false);
+      if (settings.PrimitiveAsBase64 && elementType.IsPrimitive)
+      {
+        int size = ByteUtils.GetSizeOf(elementType);
+        int count = 0;
+        // ReSharper disable once UnusedVariable
+        foreach (object o in e)
+          count++;
+
+        Action<byte[], int, object> writer = ByteUtils.GetBinaryWriter(elementType);
+
+        byte[] buffer = new byte[size * count];
+        int index = 0;
+        foreach (object o in e)
+        {
+          writer(buffer, index, o);
+          index += size;
+        }
+        data.Value = Convert.ToBase64String(buffer);
+      }
+      else
+      {
+        Info info = new Info(settings.ContainerItemName, NanoLocation.SubNode, elementType);
+        foreach (object o in e)
+          SerializeValue(elementType, o, data, info, false);
+      }
 
       haveContainers = true;
     }
@@ -231,11 +255,30 @@ namespace BrokenEvent.NanoSerializer
     private void SerializeArrayRank(Array array, Type elementType, int[] coords, int r, IDataAdapter data, Info info)
     {
       if (r == coords.Length - 1)
-        for (int i = 0; i < array.GetLength(r); i++)
+      {
+        if (settings.PrimitiveAsBase64 && elementType.IsPrimitive)
         {
-          coords[r] = i;
-          SerializeValue(elementType, array.GetValue(coords), data, info, false);
+          int size = ByteUtils.GetSizeOf(elementType);
+          int count = array.GetLength(r);
+          Action<byte[], int, object> writer = ByteUtils.GetBinaryWriter(elementType);
+
+          byte[] buffer = new byte[size * count];
+          int index = 0;
+          for (int i = 0; i < count; i++)
+          {
+            coords[r] = i;
+            writer(buffer, index, array.GetValue(coords));
+            index += size;
+          }
+          data.Value = Convert.ToBase64String(buffer);
         }
+        else
+          for (int i = 0; i < array.GetLength(r); i++)
+          {
+            coords[r] = i;
+            SerializeValue(elementType, array.GetValue(coords), data, info, false);
+          }
+      }
       else
         for (int i = 0; i < array.GetLength(r); i++)
         {

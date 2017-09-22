@@ -328,6 +328,21 @@ namespace BrokenEvent.NanoSerializer
         TypeCache.AddTypeAccessor(type, addAction);
       }
 
+      if (elementType.IsPrimitive)
+      {
+        byte[] buffer = Convert.FromBase64String(data.Value);
+        int size = ByteUtils.GetSizeOf(elementType);
+        int count = buffer.Length / size;
+        Func<byte[], int, object> reader = ByteUtils.GetBinaryReader(elementType);
+
+        if (reverse)
+          for (int i = count - 1; i >= 0; i--)
+            addAction(container, reader(buffer, size * i));
+        else
+          for (int i = 0; i < count; i++)
+            addAction(container, reader(buffer, size * i));
+      }
+
       if (reverse)
         foreach (IDataAdapter element in data.GetChildrenReversed())
           addAction(container, DeserializeObject(elementType, element, null));
@@ -356,11 +371,27 @@ namespace BrokenEvent.NanoSerializer
     {
       if (r == coords.Length - 1)
       {
-        int index = 0;
-        foreach (IDataAdapter element in data.GetChildren())
+        if (elementType.IsPrimitive)
         {
-          coords[r] = index++;
-          array.SetValue(DeserializeObject(elementType, element, null), coords);
+          byte[] buffer = Convert.FromBase64String(data.Value);
+          int size = ByteUtils.GetSizeOf(elementType);
+          int count = array.GetLength(r);
+          Func<byte[], int, object> reader = ByteUtils.GetBinaryReader(elementType);
+
+          for (int i = 0; i < count; i++)
+          {
+            coords[r] = i;
+            array.SetValue(reader(buffer, i * size), coords);
+          }
+        }
+        else
+        {
+          int index = 0;
+          foreach (IDataAdapter element in data.GetChildren())
+          {
+            coords[r] = index++;
+            array.SetValue(DeserializeObject(elementType, element, null), coords);
+          }
         }
       }
       else
@@ -374,8 +405,15 @@ namespace BrokenEvent.NanoSerializer
       }
     }
 
-    private static void ScanArrayRanks(IDataAdapter data, int[] lengths, int index)
+    private static void ScanArrayRanks(IDataAdapter data, Type elementType, int[] lengths, int index)
     {
+      if (index == lengths.Length - 1 && elementType.IsPrimitive)
+      {
+        string value = data.Value;
+        lengths[index] = ByteUtils.GetBytesInBase64(value) / ByteUtils.GetSizeOf(elementType);
+        return;
+      }
+
       int count = 0;
       IDataAdapter firstChild = null;
       foreach (IDataAdapter e in data.GetChildren())
@@ -388,7 +426,7 @@ namespace BrokenEvent.NanoSerializer
 
       lengths[index] = count;
       if (index < lengths.Length - 1)
-        ScanArrayRanks(firstChild, lengths, index + 1);
+        ScanArrayRanks(firstChild, elementType, lengths, index + 1);
     }
 
     private void DeserializeContainer(Type type, TypeCategory category, IDataAdapter data, ref object target)
@@ -398,7 +436,7 @@ namespace BrokenEvent.NanoSerializer
       {
         Type elementType = type.GetElementType();
         int[] lengths = new int[int.Parse(data.GetSystemAttribute(ATTRIBUTE_ARRAY_RANK))];
-        ScanArrayRanks(data, lengths, 0);
+        ScanArrayRanks(data, elementType, lengths, 0);
 
         Array array;
         if (target == null)

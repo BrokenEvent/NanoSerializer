@@ -599,7 +599,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
     private class SquareArrayClass
     {
-      public byte[,] Bytes;
+      public string[,] Bytes;
     }
 
     [Test]
@@ -607,7 +607,7 @@ namespace BrokenEvent.NanoSerializer.Tests
     {
       SquareArrayClass a = new SquareArrayClass()
       {
-        Bytes = new byte[,] { {1, 2}, {3, 4} },
+        Bytes = new string[,] { {"1", "2"}, {"3", "4"} },
       };
 
       XmlDocument target = new XmlDocument();
@@ -625,7 +625,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
     private class TriangleArrayClass
     {
-      public byte[][] Bytes;
+      public string[][] Bytes;
     }
 
     [Test]
@@ -633,11 +633,11 @@ namespace BrokenEvent.NanoSerializer.Tests
     {
       TriangleArrayClass a = new TriangleArrayClass()
       {
-        Bytes = new byte[2][]
+        Bytes = new string[2][]
       };
 
-      a.Bytes[0] = new byte[] { 1, 2 };
-      a.Bytes[1] = new byte[] { 1, 2, 3 };
+      a.Bytes[0] = new string[] { "1", "2" };
+      a.Bytes[1] = new string[] { "1", "2", "3" };
 
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
@@ -652,7 +652,6 @@ namespace BrokenEvent.NanoSerializer.Tests
           Assert.AreEqual(a.Bytes[x][y], b.Bytes[x][y]);
     }
  
-
     private class QueueClass
     {
       public Queue<string> Strings;
@@ -1037,6 +1036,69 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(((ThreeAttrsTestClass)a.B).A, ((ThreeAttrsTestClass)b.B).A);
       Assert.AreEqual(((ThreeAttrsTestClass)a.B).B, ((ThreeAttrsTestClass)b.B).B);
       Assert.AreEqual(((ThreeAttrsTestClass)a.B).C, ((ThreeAttrsTestClass)b.B).C);
+    }
+
+    private class PrimitiveArrayClass
+    {
+      public int[] Ints;
+      public float[] Floats;
+      public int[,] Ints2;
+    }
+
+    [Test]
+    public void PrimitiveArray()
+    {
+      PrimitiveArrayClass a = new PrimitiveArrayClass
+      {
+        Ints = new[] { 1, 2, 3, 4, 5, 6 },
+        Floats = new[] { 1.5f, 2.5f, 3.5f },
+        Ints2 = new[,] { { 1, 2 }, { 3, 4 } }
+      };
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(3, target.DocumentElement.ChildNodes.Count);
+
+      Assert.AreEqual(1, GetElement(target, "Ints").ChildNodes.Count);
+      Assert.AreEqual(1, GetElement(target, "Floats").ChildNodes.Count);
+
+      PrimitiveArrayClass b = Deserializer.Deserialize<PrimitiveArrayClass>((SystemXmlAdapter)target);
+
+      for (int i = 0; i < a.Ints.Length; i++)
+        Assert.AreEqual(a.Ints[i], b.Ints[i]);
+      for (int i = 0; i < a.Floats.Length; i++)
+        Assert.AreEqual(a.Floats[i], b.Floats[i]);
+      for (int x = 0; x < a.Ints2.GetLength(0); x++)
+        for (int y = 0; y < a.Ints2.GetLength(1); y++)
+          Assert.AreEqual(a.Ints2[x, y], b.Ints2[x, y]);
+    }
+
+    private class PrimitiveListClass
+    {
+      public List<int> Ints { get; } = new List<int>();
+    }
+
+    [Test]
+    public void PrimitiveList()
+    {
+      PrimitiveListClass a = new PrimitiveListClass();
+      a.Ints.Add(1);
+      a.Ints.Add(3);
+      a.Ints.Add(4);
+      a.Ints.Add(5);
+      a.Ints.Add(6);
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(1, GetElement(target, "Ints").ChildNodes.Count);
+
+      PrimitiveListClass b = Deserializer.Deserialize<PrimitiveListClass>((SystemXmlAdapter)target);
+
+      for (int i = 0; i < a.Ints.Count; i++)
+        Assert.AreEqual(a.Ints[i], b.Ints[i]);
     }
   }
 }

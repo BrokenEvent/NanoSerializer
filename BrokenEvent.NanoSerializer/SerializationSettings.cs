@@ -17,6 +17,7 @@
       ArrayItemName = "A";
       AssemblyQualifiedNames = true;
       SerializePrivateProperties = false;
+      PrimitiveAsBase64 = true;
     }
 
     /// <summary>
@@ -66,5 +67,10 @@
     /// Gets or sets the value indicating whether the private properties will also be serialized.
     /// </summary>
     public bool SerializePrivateProperties { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value indicationg whether containers of primitive types will be serialized as base64 string instead of separate items.
+    /// </summary>
+    public bool PrimitiveAsBase64 { get; set; }
   }
 }

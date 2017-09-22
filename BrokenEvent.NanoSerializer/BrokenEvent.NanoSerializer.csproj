@@ -36,6 +36,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ByteUtils.cs" />
     <Compile Include="Caching\TypeCategory.cs" />
     <Compile Include="Caching\FieldWrapper.cs" />
     <Compile Include="Caching\MemberWrapper.cs" />
