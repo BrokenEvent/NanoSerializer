@@ -74,7 +74,7 @@ namespace BrokenEvent.NanoSerializer
     /// </summary>
     /// <param name="data">Data carrier to serialize to</param>
     /// <param name="target">Object or root of object model to be serialized</param>
-    public static void Serialize(IDataAdapter data, object target)
+    public static void Serialize<TTarget>(IDataAdapter data, TTarget target)
     {
       new Serializer().SerializeObject(data, target);
     }
@@ -85,7 +85,7 @@ namespace BrokenEvent.NanoSerializer
     /// <param name="data">Data carrier to serialize to</param>
     /// <param name="target">Object or root of object model to be serialized</param>
     /// <exception cref="ArgumentNullException">thrown if <paramref name="data"/> is null or <paramref name="target"/> is null</exception>
-    public void SerializeObject(IDataAdapter data, object target)
+    public void SerializeObject<TTarget>(IDataAdapter data, TTarget target)
     {
       if (data == null)
         throw new ArgumentNullException(nameof(data));
@@ -96,7 +96,7 @@ namespace BrokenEvent.NanoSerializer
       haveReferences = false;
       havePrivateProperties = false;
 
-      SerializeValue(data, target);
+      SerializeSubValue(typeof(TTarget), target, data, null);
 
       if (!settings.SaveOptimizationFlags)
         return;

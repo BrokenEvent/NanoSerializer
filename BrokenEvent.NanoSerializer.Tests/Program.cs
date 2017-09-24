@@ -195,7 +195,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       xml = new XmlDocument();
       using (TextReader reader = new StringReader(stringBuilder.ToString()))
         xml.Load(reader);
-      Deserializer.Deserialize<ModelSubclass>((SystemXmlAdapter)xml);
+      Deserializer.Deserialize<ModelClass>((SystemXmlAdapter)xml);
 
       WriteWarmUp("Manual serialization");
       xml = new XmlDocument();
@@ -276,7 +276,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       stopwatch.Restart();
       using (TextReader reader = new StringReader(stringBuilder.ToString()))
         xml.Load(reader);
-      result = Deserializer.Deserialize<ModelSubclass>((SystemXmlAdapter)xml);
+      result = Deserializer.Deserialize<ModelClass>((SystemXmlAdapter)xml);
       stopwatch.Stop();
       WriteTestFinish(stopwatch, ModelClass.CompareModel(target, result));
 
