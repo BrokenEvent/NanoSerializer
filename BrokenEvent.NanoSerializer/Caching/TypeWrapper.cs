@@ -37,6 +37,7 @@ namespace BrokenEvent.NanoSerializer.Caching
 
         NanoLocation location = NanoLocation.Auto;
         NanoState state = NanoState.Serialize;
+        string name = null;
         int constructorArg = -1;
         if (attr != null)
         {
@@ -45,9 +46,10 @@ namespace BrokenEvent.NanoSerializer.Caching
           constructorArg = attr.ConstructorArg;
           if (constructorArg > maxArgIndex)
             maxArgIndex = constructorArg;
+          name = attr.Name;
         }
 
-        Fields.Add(new FieldWrapper(Type, info, location, state, constructorArg));
+        Fields.Add(new FieldWrapper(Type, info, location, state, constructorArg, name));
       }
     }
 
@@ -72,6 +74,7 @@ namespace BrokenEvent.NanoSerializer.Caching
         NanoLocation location = NanoLocation.Auto;
         NanoState state = NanoState.Serialize;
         int constructorArg = -1;
+        string name = null;
 
         if (attr != null)
         {
@@ -83,9 +86,10 @@ namespace BrokenEvent.NanoSerializer.Caching
           if (constructorArg > maxArgIndex)
             maxArgIndex = constructorArg;
           state = attr.State;
+          name = attr.Name;
         }
 
-        Properties.Add(new PropertyWrapper(Type, info, location, state, constructorArg));
+        Properties.Add(new PropertyWrapper(Type, info, location, state, constructorArg, name));
       }
     }
 

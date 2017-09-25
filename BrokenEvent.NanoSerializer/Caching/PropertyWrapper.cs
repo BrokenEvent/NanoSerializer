@@ -11,8 +11,8 @@ namespace BrokenEvent.NanoSerializer.Caching
     public readonly bool CanWrite;
     public readonly bool CanRead;
 
-    public PropertyWrapper(Type ownerType, PropertyInfo info, NanoLocation location, NanoState state, int constructorArg)
-      : base(ownerType, info, info.PropertyType, location, state, constructorArg)
+    public PropertyWrapper(Type ownerType, PropertyInfo info, NanoLocation location, NanoState state, int constructorArg, string name)
+      : base(ownerType, info, info.PropertyType, location, state, constructorArg, name)
     {
       Info = info;
 

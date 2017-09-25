@@ -9,8 +9,8 @@ namespace BrokenEvent.NanoSerializer.Caching
     private readonly Func<object, object> readFunc;
     private readonly Action<object, object> writeFunc;
 
-    public FieldWrapper(Type ownerType, FieldInfo info, NanoLocation location, NanoState state, int constructorArg) :
-      base(ownerType, info, info.FieldType, location, state, constructorArg)
+    public FieldWrapper(Type ownerType, FieldInfo info, NanoLocation location, NanoState state, int constructorArg, string name) :
+      base(ownerType, info, info.FieldType, location, state, constructorArg, name)
     {
       Info = info;
 

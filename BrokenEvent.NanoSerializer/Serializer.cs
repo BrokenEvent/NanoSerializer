@@ -20,7 +20,7 @@ namespace BrokenEvent.NanoSerializer
       public readonly Type[] GenericArgs;
 
       public Info(MemberWrapper member):
-        this(member.MemberInfo.Name, member.Location, member.TypeCategory, member.GenericArguments) { }
+        this(member.Name, member.Location, member.TypeCategory, member.GenericArguments) { }
 
       private Info(string name, NanoLocation location, TypeCategory category, Type[] genericArgs)
       {

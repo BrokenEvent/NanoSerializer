@@ -9,7 +9,7 @@ namespace BrokenEvent.NanoSerializer
   public class NanoSerializationAttribute: Attribute
   {
     /// <summary>
-    /// Serialization state for the property.
+    /// Serialization state for the property or field.
     /// </summary>
     public NanoState State { get; set; } = NanoState.Serialize;
 
@@ -22,5 +22,10 @@ namespace BrokenEvent.NanoSerializer
     /// Data location. <see cref="NanoLocation"/> is not available for complex types.
     /// </summary>
     public NanoLocation Location { get; set; } = NanoLocation.Auto;
+
+    /// <summary>
+    /// Custom name of the property or field.
+    /// </summary>
+    public string Name { get; set; }
   }
 }

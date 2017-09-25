@@ -13,14 +13,16 @@ namespace BrokenEvent.NanoSerializer.Caching
     public readonly TypeCategory TypeCategory;
     public readonly Type[] GenericArguments;
     public readonly int ConstructorArg;
+    public readonly string Name;
 
-    protected MemberWrapper(Type ownerType, MemberInfo memberInfo, Type memberType, NanoLocation location, NanoState state, int constructorArg)
+    protected MemberWrapper(Type ownerType, MemberInfo memberInfo, Type memberType, NanoLocation location, NanoState state, int constructorArg, string name)
     {
       OwnerType = ownerType;
       MemberInfo = memberInfo;
       MemberType = memberType;
       State = state;
       ConstructorArg = constructorArg;
+      Name = name ?? memberInfo.Name;
 
       TypeCategory = SerializationBase.GetTypeCategory(memberType);
 

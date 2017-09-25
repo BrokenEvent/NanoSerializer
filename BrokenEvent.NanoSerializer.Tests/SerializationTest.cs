@@ -36,6 +36,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
     private class ThreeAttrsTestClass
     {
+      [NanoSerialization(Name = "A_")]
       public int A;
       public string B { get; set; }
       public NanoState C { get; set; }
@@ -73,7 +74,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
       Assert.AreEqual(4, target.DocumentElement.Attributes.Count);
-      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A_"));
       Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
       Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
 
@@ -112,7 +113,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
       Assert.AreEqual(5, target.DocumentElement.Attributes.Count);
-      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A_"));
       Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
       Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
       Assert.AreEqual("private", target.DocumentElement.GetAttribute("F"));
@@ -157,7 +158,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
       Assert.AreEqual(4, target.DocumentElement.Attributes.Count);
-      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A_"));
       Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
       Assert.AreEqual("2", target.DocumentElement.GetAttribute("C"));
 
@@ -246,7 +247,7 @@ namespace BrokenEvent.NanoSerializer.Tests
     {
       [NanoSerialization(Location = NanoLocation.SubNode)]
       public int A { get; set; }
-      [NanoSerialization(Location = NanoLocation.SubNode)]
+      [NanoSerialization(Location = NanoLocation.SubNode, Name = "B_")]
       public string B { get; set; }
       [NanoSerialization(Location = NanoLocation.SubNode)]
       public NanoState C { get; set; }
@@ -269,7 +270,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       Assert.AreEqual(3, target.DocumentElement.ChildNodes.Count);
       Assert.AreEqual("123", GetXmlValue(target, "A"));
-      Assert.AreEqual("testString", GetXmlValue(target, "B"));
+      Assert.AreEqual("testString", GetXmlValue(target, "B_"));
       Assert.AreEqual("Ignore", GetXmlValue(target, "C"));
 
       ThreeSubnodesTestClass b = Deserializer.Deserialize<ThreeSubnodesTestClass>((SystemXmlAdapter)target);
@@ -362,7 +363,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
       Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
-      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A_"));
       Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
       Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
 
@@ -408,7 +409,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
       Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
-      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A_"));
       Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
       Assert.AreEqual("Ignore", target.DocumentElement.GetAttribute("C"));
 

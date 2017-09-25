@@ -200,13 +200,13 @@ namespace BrokenEvent.NanoSerializer
         if (property.TypeCategory == TypeCategory.Primitive ||
             property.TypeCategory == TypeCategory.Enum)
         {
-          string stringValue = ReadString(data, property.Location, property.Info.Name);
+          string stringValue = ReadString(data, property.Location, property.Name);
           if (stringValue != null)
             value = DeserializePrimitive(property.MemberType, stringValue);
         }
         else
         {
-          IDataAdapter subnode = data.GetChild(property.Info.Name);
+          IDataAdapter subnode = data.GetChild(property.Name);
           if (subnode != null)
             value = DeserializeObject(property.MemberType, subnode, null);
         }
@@ -226,13 +226,13 @@ namespace BrokenEvent.NanoSerializer
         if (field.TypeCategory == TypeCategory.Primitive ||
             field.TypeCategory == TypeCategory.Enum)
         {
-          string stringValue = ReadString(data, field.Location, field.Info.Name);
+          string stringValue = ReadString(data, field.Location, field.Name);
           if (stringValue != null)
             value = DeserializePrimitive(field.MemberType, stringValue);
         }
         else
         {
-          IDataAdapter subnode = data.GetChild(field.Info.Name);
+          IDataAdapter subnode = data.GetChild(field.Name);
           if (subnode != null)
             value = DeserializeObject(field.MemberType, subnode, null);
         }
@@ -279,13 +279,13 @@ namespace BrokenEvent.NanoSerializer
           if (!property.Info.CanWrite)
             continue;
 
-          string stringValue = ReadString(data, property.Location, property.Info.Name);
+          string stringValue = ReadString(data, property.Location, property.Name);
           if (stringValue != null)
             property.SetValue(target, DeserializePrimitive(property.MemberType, stringValue));
         }
         else
         {
-          IDataAdapter subnode = data.GetChild(property.Info.Name);
+          IDataAdapter subnode = data.GetChild(property.Name);
           if (subnode != null)
           {
             object currentValue = property.GetValue(target);
@@ -309,13 +309,13 @@ namespace BrokenEvent.NanoSerializer
         if (field.TypeCategory == TypeCategory.Primitive ||
             field.TypeCategory == TypeCategory.Enum)
         {
-          string stringValue = ReadString(data, field.Location, field.Info.Name);
+          string stringValue = ReadString(data, field.Location, field.Name);
           if (stringValue != null)
             field.SetValue(target, DeserializePrimitive(field.Info.FieldType, stringValue));
         }
         else
         {
-          IDataAdapter subnode = data.GetChild(field.Info.Name);
+          IDataAdapter subnode = data.GetChild(field.Name);
           if (subnode != null)
           {
             object value = DeserializeObject(field.MemberType, subnode, null);
