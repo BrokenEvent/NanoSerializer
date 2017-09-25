@@ -95,6 +95,9 @@ namespace BrokenEvent.NanoSerializer
 
     internal static TypeCategory GetTypeCategory(Type type)
     {
+      if (type.IsEnum)
+        return TypeCategory.Enum;
+
       if (IsPrimitive(type))
         return TypeCategory.Primitive;
 

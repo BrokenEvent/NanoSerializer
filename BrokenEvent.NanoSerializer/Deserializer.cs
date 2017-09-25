@@ -197,7 +197,8 @@ namespace BrokenEvent.NanoSerializer
           continue;
 
         object value = null;
-        if (property.TypeCategory == TypeCategory.Primitive)
+        if (property.TypeCategory == TypeCategory.Primitive ||
+            property.TypeCategory == TypeCategory.Enum)
         {
           string stringValue = ReadString(data, property.Location, property.Info.Name);
           if (stringValue != null)
@@ -222,7 +223,8 @@ namespace BrokenEvent.NanoSerializer
           continue;
 
         object value = null;
-        if (field.TypeCategory == TypeCategory.Primitive)
+        if (field.TypeCategory == TypeCategory.Primitive ||
+            field.TypeCategory == TypeCategory.Enum)
         {
           string stringValue = ReadString(data, field.Location, field.Info.Name);
           if (stringValue != null)
@@ -271,7 +273,8 @@ namespace BrokenEvent.NanoSerializer
             (flags & OptimizationFlags.PrivateProperties) == 0)
           continue;
 
-        if (property.TypeCategory == TypeCategory.Primitive)
+        if (property.TypeCategory == TypeCategory.Primitive ||
+            property.TypeCategory == TypeCategory.Enum)
         {
           if (!property.Info.CanWrite)
             continue;
@@ -303,7 +306,8 @@ namespace BrokenEvent.NanoSerializer
         if (field.ConstructorArg != -1 && field.State != NanoState.SerializeSet)
           continue;
 
-        if (field.TypeCategory == TypeCategory.Primitive)
+        if (field.TypeCategory == TypeCategory.Primitive ||
+            field.TypeCategory == TypeCategory.Enum)
         {
           string stringValue = ReadString(data, field.Location, field.Info.Name);
           if (stringValue != null)

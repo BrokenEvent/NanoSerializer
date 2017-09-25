@@ -141,6 +141,43 @@ namespace BrokenEvent.NanoSerializer.Tests
     }
 
     [Test]
+    public void EnumAsValue()
+    {
+      ThreeAttrsTestClass a = new ThreeAttrsTestClass
+      {
+        A = 123,
+        B = "testString",
+        C = NanoState.Ignore
+      };
+
+      XmlDocument target = new XmlDocument();
+      SerializationSettings settings = new SerializationSettings();
+      settings.EnumsAsValue = true;
+      new Serializer(settings).SerializeObject((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(0, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(4, target.DocumentElement.Attributes.Count);
+      Assert.AreEqual("123", target.DocumentElement.GetAttribute("A"));
+      Assert.AreEqual("testString", target.DocumentElement.GetAttribute("B"));
+      Assert.AreEqual("2", target.DocumentElement.GetAttribute("C"));
+
+      ThreeAttrsTestClass b = Deserializer.Deserialize<ThreeAttrsTestClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.AreEqual(a.B, b.B);
+      Assert.AreEqual(a.C, b.C);
+      Assert.IsNull(b.GetPrivate());
+
+      ThreeAttrsTestClass c = new ThreeAttrsTestClass();
+      new Deserializer().FillObject(c, (SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, c.A);
+      Assert.AreEqual(a.B, c.B);
+      Assert.AreEqual(a.C, c.C);
+      Assert.IsNull(c.GetPrivate());
+    }
+
+    [Test]
     public void ThreeAttrsStruct()
     {
       ThreeAttrsTestStruct a = new ThreeAttrsTestStruct

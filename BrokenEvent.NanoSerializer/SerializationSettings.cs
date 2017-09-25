@@ -29,6 +29,7 @@
       SerializePrivateProperties = false;
       PrimitiveAsBase64 = true;
       SerializeNull = false;
+      EnumsAsValue = false;
     }
 
     /// <summary>
@@ -88,5 +89,10 @@
     /// Gets or sets the value indicating whether to serialize null values.
     /// </summary>
     public bool SerializeNull { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value indicating whether to serialize enums as int values. Enum member names will be used if disabled.
+    /// </summary>
+    public bool EnumsAsValue { get; set; }
   }
 }

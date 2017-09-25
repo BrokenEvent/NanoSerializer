@@ -25,7 +25,7 @@ namespace BrokenEvent.NanoSerializer.Caching
       TypeCategory = SerializationBase.GetTypeCategory(memberType);
 
       if (location == NanoLocation.Auto)
-        Location = TypeCategory == TypeCategory.Primitive ? NanoLocation.Attribute : NanoLocation.SubNode;
+        Location = TypeCategory == TypeCategory.Primitive || TypeCategory == TypeCategory.Enum ? NanoLocation.Attribute : NanoLocation.SubNode;
       else
         Location = location;
 

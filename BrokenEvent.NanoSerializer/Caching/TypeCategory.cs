@@ -3,6 +3,7 @@
   internal enum TypeCategory
   {
     Primitive,
+    Enum,
     Unknown,
     // containers
     Array,

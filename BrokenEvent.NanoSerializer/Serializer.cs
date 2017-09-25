@@ -185,6 +185,20 @@ namespace BrokenEvent.NanoSerializer
         return;
       }
 
+      if (info.Category == TypeCategory.Enum)
+      {
+        // no need to serialize
+        if (isReadOnly)
+          return;
+
+        if (info.Location == NanoLocation.SubNode)
+          data.AddChild(info.Name, SerializeEnum(value));
+        else
+          data.AddAttribute(info.Name, SerializeEnum(value));
+
+        return;
+      }
+
       if (info.Location == NanoLocation.Attribute)
         throw new SerializationException($"Unable to serialize {type.Name} to attribute");
 
@@ -218,6 +232,9 @@ namespace BrokenEvent.NanoSerializer
         case TypeCategory.Primitive:
           data.Value = value.ToString();
           break;
+        case TypeCategory.Enum:
+          data.Value = SerializeEnum(value);
+          break;
         case TypeCategory.Unknown:
           SerializeValue(data, value);
           break;
@@ -225,6 +242,14 @@ namespace BrokenEvent.NanoSerializer
           SerializeContainer(value, data, category, genericArgs);
           break;
       }
+    }
+
+    private string SerializeEnum(object value)
+    {
+      if (settings.EnumsAsValue)
+        return ((IConvertible)value).ToInt64(null).ToString();
+
+      return value.ToString();
     }
 
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
