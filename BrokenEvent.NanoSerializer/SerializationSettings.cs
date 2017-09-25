@@ -30,6 +30,8 @@
       PrimitiveAsBase64 = true;
       SerializeNull = false;
       EnumsAsValue = false;
+      EnableObjectCache = true;
+      EnableTypeMarkers = true;
     }
 
     /// <summary>
@@ -94,5 +96,18 @@
     /// Gets or sets the value indicating whether to serialize enums as int values. Enum member names will be used if disabled.
     /// </summary>
     public bool EnumsAsValue { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value indicating whether to enable object caching. Object cache is used to resolve reference cycles when
+    /// serializing object graphs. Warning: disabling this option may produce infinite recursion if objects reference each other.
+    /// </summary>
+    public bool EnableObjectCache { get; set; }
+
+    /// <summary>
+    /// Gets or set the value indicating whether to save type markers used in polymorphism. They are
+    /// used in deserialization process if the actual object type differs from property or field type.
+    /// Warning: disabling this option may cause deserialization to product wrong results in some cases.
+    /// </summary>
+    public bool EnableTypeMarkers { get; set; }
   }
 }

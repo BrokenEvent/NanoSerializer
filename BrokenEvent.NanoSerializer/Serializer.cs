@@ -207,7 +207,7 @@ namespace BrokenEvent.NanoSerializer
     private void SerializeSubValue(Type type, object value, IDataAdapter data, Type[] genericArgs)
     {
       int objId;
-      if (type.IsClass && objectsCache.TryGetValue(value, out objId))
+      if (settings.EnableObjectCache && type.IsClass && objectsCache.TryGetValue(value, out objId))
       {
         data.AddSystemAttribute(ATTRIBUTE_OBJID, objId.ToString());
         haveReferences = true;
@@ -217,7 +217,8 @@ namespace BrokenEvent.NanoSerializer
       Type targetType = value.GetType();
       if (targetType != type)
       {
-        data.AddSystemAttribute(ATTRIBUTE_TYPE, TypeCache.GetTypeFullName(targetType, settings.AssemblyQualifiedNames));
+        if (settings.EnableTypeMarkers)
+          data.AddSystemAttribute(ATTRIBUTE_TYPE, TypeCache.GetTypeFullName(targetType, settings.AssemblyQualifiedNames));
         type = targetType;
         genericArgs = type.GetGenericArguments();
       }
