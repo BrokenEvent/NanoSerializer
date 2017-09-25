@@ -83,6 +83,14 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
       Assert.IsNull(b.GetPrivate());
+
+      ThreeAttrsTestClass c = new ThreeAttrsTestClass();
+      new Deserializer().FillObject(c, (SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, c.A);
+      Assert.AreEqual(a.B, c.B);
+      Assert.AreEqual(a.C, c.C);
+      Assert.IsNull(c.GetPrivate());
     }
 
     [Test]
@@ -115,6 +123,14 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
       Assert.AreEqual(a.GetPrivate(), b.GetPrivate());
+
+      ThreeAttrsTestClass c = new ThreeAttrsTestClass();
+      new Deserializer().FillObject(c, (SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, c.A);
+      Assert.AreEqual(a.B, c.B);
+      Assert.AreEqual(a.C, c.C);
+      Assert.AreEqual(a.GetPrivate(), c.GetPrivate());
     }
 
     public struct ThreeAttrsTestStruct
@@ -224,6 +240,13 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
+
+      ThreeSubnodesTestClass c = new ThreeSubnodesTestClass();
+      new Deserializer().FillObject(c, (SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, c.A);
+      Assert.AreEqual(a.B, c.B);
+      Assert.AreEqual(a.C, c.C);
     }
 
     public class CustomConstructorTestClass
@@ -322,6 +345,16 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.F.C, b.F.C);
       Assert.AreEqual(a.F.C, b.F.C);
       Assert.AreEqual(a.F.C, b.F.C);
+
+      ComplexTestClass c = new ComplexTestClass();
+      new Deserializer().FillObject(c, (SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, c.A);
+      Assert.AreEqual(a.B, c.B);
+      Assert.AreEqual(a.C, c.C);
+      Assert.AreEqual(a.F.C, c.F.C);
+      Assert.AreEqual(a.F.C, c.F.C);
+      Assert.AreEqual(a.F.C, c.F.C);
     }
 
     [Test]
@@ -1099,6 +1132,12 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       for (int i = 0; i < a.Ints.Count; i++)
         Assert.AreEqual(a.Ints[i], b.Ints[i]);
+
+      PrimitiveListClass c = new PrimitiveListClass();
+      new Deserializer().FillObject(c, (SystemXmlAdapter)target);
+
+      for (int i = 0; i < a.Ints.Count; i++)
+        Assert.AreEqual(a.Ints[i], c.Ints[i]);
     }
   }
 }

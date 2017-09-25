@@ -44,6 +44,21 @@ namespace BrokenEvent.NanoSerializer
       return (T)DeserializeObject(typeof(T), data, null);
     }
 
+    /// <summary>
+    /// Fills existing object with deserialized data.
+    /// </summary>
+    /// <typeparam name="T">Target type of the object</typeparam>
+    /// <param name="target">Target object to fill</param>
+    /// <param name="data">Data source to deserialize from</param>
+    public void FillObject<T>(T target, IDataAdapter data)
+    {
+      string flagsStr = data.GetSystemAttribute(ATTRIBUTE_FLAGS);
+      if (flagsStr != null)
+        flags = (OptimizationFlags)int.Parse(flagsStr);
+      TypeWrapper wrapper = TypeCache.GetWrapper(typeof(T));
+      FillObject(wrapper, target, data);
+    }
+
     private Dictionary<int, object> objectCache = new Dictionary<int, object>();
     private Dictionary<string, object> constructorArgs = new Dictionary<string, object>();
     private int maxObjId = 0;
