@@ -118,11 +118,8 @@ namespace BrokenEvent.NanoSerializer
       objectsCache.Add(target, maxObjId++);
       TypeWrapper wrapper = TypeCache.GetWrapper(target.GetType());
 
-      if (wrapper.IsSelfSerializable)
-      {
-        ((INanoSerializable)target).Serialize(data, this);
+      if (wrapper.TrySerialize(target, data, this))
         return;
-      }
 
       for (int i = 0; i < wrapper.Properties.Count; i++)
       {

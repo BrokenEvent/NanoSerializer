@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Reflection;
 
+using BrokenEvent.NanoSerializer.Custom;
+
 namespace BrokenEvent.NanoSerializer.Caching
 {
   internal class TypeWrapper
@@ -13,11 +15,16 @@ namespace BrokenEvent.NanoSerializer.Caching
     public readonly int ConstructorArgsCount;
     private readonly Func<object[], object> createFunc;
     public readonly bool IsSelfSerializable;
+    public readonly INanoSerializer Serializer;
     
     public TypeWrapper(Type type)
     {
       Type = type;
       int maxArgIndex = -1;
+
+      Serializer = CustomStore.FindSerializer(type);
+      if (Serializer != null)
+        return;
 
       UpdateFields(ref maxArgIndex);
       UpdateProperties(ref maxArgIndex);
@@ -30,7 +37,9 @@ namespace BrokenEvent.NanoSerializer.Caching
     {
       foreach (FieldInfo info in Type.GetFields(BindingFlags.Instance | BindingFlags.Public))
       {
-        NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
+        NanoSerializationAttribute attr = CustomStore.FindAttribute(Type, info.Name);
+        if (attr == null)
+          attr = info.GetCustomAttribute<NanoSerializationAttribute>();
 
         if (attr != null && attr.State == NanoState.Ignore)
           continue;
@@ -70,7 +79,10 @@ namespace BrokenEvent.NanoSerializer.Caching
         if (indexParams.Length > 0)
           continue;
 
-        NanoSerializationAttribute attr = info.GetCustomAttribute<NanoSerializationAttribute>();
+        NanoSerializationAttribute attr = CustomStore.FindAttribute(Type, info.Name);
+        if (attr == null)
+          attr = info.GetCustomAttribute<NanoSerializationAttribute>();
+
         NanoLocation location = NanoLocation.Auto;
         NanoState state = NanoState.Serialize;
         int constructorArg = -1;
@@ -191,6 +203,18 @@ namespace BrokenEvent.NanoSerializer.Caching
     public object CreateObject(object[] args)
     {
       return createFunc(args);
+    }
+
+    public bool TrySerialize(object target, IDataAdapter data, ISubSerializer subSerializer)
+    {
+      if (Serializer != null)
+        Serializer.SerializeObject(target, data, subSerializer);
+      else if (IsSelfSerializable)
+        ((INanoSerializable)target).Serialize(data, subSerializer);
+      else
+        return false;
+
+      return true;
     }
   }
 }

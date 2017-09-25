@@ -44,6 +44,8 @@
     <Compile Include="Caching\PropertyWrapper.cs" />
     <Compile Include="Caching\TypeCache.cs" />
     <Compile Include="Caching\TypeWrapper.cs" />
+    <Compile Include="Custom\CustomStore.cs" />
+    <Compile Include="Custom\INanoSerializer.cs" />
     <Compile Include="Deserializer.cs" />
     <Compile Include="IDataAdapter.cs" />
     <Compile Include="INanoSerializable.cs" />

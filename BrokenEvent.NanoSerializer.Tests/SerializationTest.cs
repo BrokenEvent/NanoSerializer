@@ -1,6 +1,9 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Xml;
+
+using BrokenEvent.NanoSerializer.Custom;
 
 using NUnit.Framework;
 
@@ -1176,6 +1179,98 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       for (int i = 0; i < a.Ints.Count; i++)
         Assert.AreEqual(a.Ints[i], c.Ints[i]);
+    }
+
+    private class CustomSerializationClass
+    {
+      public CustomSerializationClass(string a)
+      {
+        A = a;
+      }
+      public string A { get; }
+      public NanoState B { get; set; }
+    }
+
+    private class CustomSerializerClass: INanoSerializer
+    {
+      public void SerializeObject(object target, IDataAdapter data, ISubSerializer subSerializer)
+      {
+        CustomSerializationClass obj = (CustomSerializationClass)target;
+        data.AddAttribute("someData", obj.A);
+        data.AddAttribute("someOtherData", obj.B.ToString());
+      }
+
+      public object DeserializeObject(IDataAdapter data, ISubDeserializer subDeserializer)
+      {
+        string a = data.GetAttribute("someData");
+        CustomSerializationClass obj = new CustomSerializationClass(a);
+        obj.B = (NanoState)Enum.Parse(typeof(NanoState), data.GetAttribute("someOtherData"));
+        return obj;
+      }
+    }
+
+    [Test]
+    public void CustomSerialization()
+    {
+      CustomSerializationClass a = new CustomSerializationClass("1111");
+      a.B = NanoState.SerializeSet;
+      CustomStore.RegisterCustomSerializer<CustomSerializationClass>(new CustomSerializerClass());
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.IsEmpty(target.DocumentElement.GetAttribute("a"));
+      Assert.IsEmpty(target.DocumentElement.GetAttribute("b"));
+
+      CustomSerializationClass b = Deserializer.Deserialize<CustomSerializationClass>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.AreEqual(a.B, b.B);
+    }
+
+    private class ThreeAttrsTestClass2
+    {
+      [NanoSerialization(Name = "A_")]
+      public int A;
+      public string B { get; set; }
+      public NanoState C { get; set; }
+    }
+
+    [Test]
+    public void CustomSettings()
+    {
+      ThreeAttrsTestClass2 a = new ThreeAttrsTestClass2
+      {
+        A = 123,
+        B = "testString",
+        C = NanoState.Ignore
+      };
+
+      CustomStore.RegisterCustomSettings(typeof(ThreeAttrsTestClass2), nameof(ThreeAttrsTestClass2.A), serializationName: "name", location: NanoLocation.SubNode);
+      CustomStore.RegisterCustomSettings(typeof(ThreeAttrsTestClass2), nameof(ThreeAttrsTestClass2.B), NanoState.Ignore);
+      CustomStore.RegisterCustomSettings(typeof(ThreeAttrsTestClass2), nameof(ThreeAttrsTestClass2.C), serializationName: "value", location: NanoLocation.SubNode);
+
+      XmlDocument target = new XmlDocument();
+      Serializer.Serialize((SystemXmlAdapter)target, a);
+
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(1, target.DocumentElement.Attributes.Count);
+      Assert.AreEqual("123", GetXmlValue(target, "name"));
+      Assert.IsNull(GetXmlValue(target, "B"));
+      Assert.AreEqual("Ignore", GetXmlValue(target, "value"));
+
+      ThreeAttrsTestClass2 b = Deserializer.Deserialize<ThreeAttrsTestClass2>((SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, b.A);
+      Assert.IsNull(b.B);
+      Assert.AreEqual(a.C, b.C);
+
+      ThreeAttrsTestClass2 c = new ThreeAttrsTestClass2();
+      new Deserializer().FillObject(c, (SystemXmlAdapter)target);
+
+      Assert.AreEqual(a.A, c.A);
+      Assert.IsNull(c.B);
+      Assert.AreEqual(a.C, c.C);
     }
   }
 }

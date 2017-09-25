@@ -188,6 +188,9 @@ namespace BrokenEvent.NanoSerializer
       // this is unknown object
       TypeWrapper wrapper = TypeCache.GetWrapper(type);
 
+      if (wrapper.Serializer != null)
+        return wrapper.Serializer.DeserializeObject(data, this);
+
       object[] constructorArgs = null;
 
       for (int i = 0; i < wrapper.Properties.Count; i++)
