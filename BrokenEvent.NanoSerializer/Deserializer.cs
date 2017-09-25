@@ -133,7 +133,7 @@ namespace BrokenEvent.NanoSerializer
       int objId = -1;
 
       // resolve reference, if any
-      if ((flags & OptimizationFlags.NoReferences) == 0)
+      if (type.IsClass && (flags & OptimizationFlags.NoReferences) == 0)
       {
         string objIdStr = data.GetSystemAttribute(ATTRIBUTE_OBJID);
         if (objIdStr != null)

@@ -20,7 +20,7 @@ namespace BrokenEvent.NanoSerializer
     /// Add attribute for regular data. Should add subelement if attributes are unavailable.
     /// </summary>
     /// <param name="name">Name of attribute</param>
-    /// <param name="value">Value of attribute</param>
+    /// <param name="value">Value of attribute. Can be null if <see cref="SerializationSettings.SerializeNull"/> is set</param>
     /// <remarks>This method will be used for regular serialized objects data while the <see cref="AddSystemAttribute"/> will be used
     /// for serializer helper data. Adapter may implement different mechanisms to avoid name collisions with system data.</remarks>
     void AddAttribute(string name, string value);
@@ -61,6 +61,13 @@ namespace BrokenEvent.NanoSerializer
     /// <param name="name">Name of the element to add</param>
     /// <returns>The added subelement.</returns>
     IDataAdapter AddChild(string name);
+
+    /// <summary>
+    /// Adds child element by name and value.
+    /// </summary>
+    /// <param name="name">Name of the element to add</param>
+    /// <param name="value">Value of the element. Can be null if <see cref="SerializationSettings.SerializeNull"/> is set</param>
+    void AddChild(string name, string value);
 
     /// <summary>
     /// Gets the children elements enumeration in straight (as stored) order.

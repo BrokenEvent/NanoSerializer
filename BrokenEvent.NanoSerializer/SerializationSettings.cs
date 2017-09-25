@@ -5,6 +5,16 @@
   /// </summary>
   public class SerializationSettings
   {
+    private static SerializationSettings instance = new SerializationSettings();
+
+    /// <summary>
+    /// Gets the global default settings instance.
+    /// </summary>
+    public static SerializationSettings Instance
+    {
+      get { return instance; }
+    }
+
     /// <summary>
     /// Creates serialization settings instance with default values.
     /// </summary>
@@ -18,6 +28,7 @@
       AssemblyQualifiedNames = true;
       SerializePrivateProperties = false;
       PrimitiveAsBase64 = true;
+      SerializeNull = false;
     }
 
     /// <summary>
@@ -28,7 +39,7 @@
     public bool SaveOptimizationFlags { get; set; }
 
     /// <summary>
-    /// Gets or sets the value indicating whether to serialize read-only fields.
+    /// Gets or sets the value indicating whether to serialize read-only properties.
     /// </summary>
     public bool SerializeReadOnly { get; set; }
 
@@ -72,5 +83,10 @@
     /// Gets or sets the value indicationg whether containers of primitive types will be serialized as base64 string instead of separate items.
     /// </summary>
     public bool PrimitiveAsBase64 { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value indicating whether to serialize null values.
+    /// </summary>
+    public bool SerializeNull { get; set; }
   }
 }

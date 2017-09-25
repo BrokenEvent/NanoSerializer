@@ -60,6 +60,10 @@ namespace BrokenEvent.NanoSerializer.Caching
 
         ParameterInfo[] indexParams = info.GetIndexParameters();
 
+        // exclude properties, that returns the same struct to void infinite recursion
+        if (!Type.IsClass && info.PropertyType == Type)
+          continue;
+
         // indexers are not supported
         if (indexParams.Length > 0)
           continue;

@@ -48,9 +48,9 @@ namespace BrokenEvent.NanoSerializer
     }
 
     /// <summary>
-    /// Creates instance of the serializer with the default settings.
+    /// Creates instance of the serializer with the default settings (<see cref="SerializationSettings.Instance"/>).
     /// </summary>
-    public Serializer(): this(new SerializationSettings())
+    public Serializer(): this(SerializationSettings.Instance)
     {
     }
 
@@ -159,6 +159,13 @@ namespace BrokenEvent.NanoSerializer
         object value = field.GetValue(target);
         if (value != null)
           SerializeValue(field.MemberType, value, data, new Info(field), false);
+        else if (settings.SerializeNull)
+        {
+          if (field.Location == NanoLocation.SubNode)
+            data.AddChild(field.Info.Name, null);
+          else
+            data.AddAttribute(field.Info.Name, null);
+        }
       }
     }
 
@@ -171,7 +178,7 @@ namespace BrokenEvent.NanoSerializer
           return;
 
         if (info.Location == NanoLocation.SubNode)
-          data.AddChild(info.Name).Value = value.ToString();
+          data.AddChild(info.Name, value.ToString());
         else
           data.AddAttribute(info.Name, value.ToString());
 
@@ -189,7 +196,7 @@ namespace BrokenEvent.NanoSerializer
     private void SerializeSubValue(Type type, object value, IDataAdapter data, Type[] genericArgs)
     {
       int objId;
-      if (objectsCache.TryGetValue(value, out objId))
+      if (type.IsClass && objectsCache.TryGetValue(value, out objId))
       {
         data.AddSystemAttribute(ATTRIBUTE_OBJID, objId.ToString());
         haveReferences = true;

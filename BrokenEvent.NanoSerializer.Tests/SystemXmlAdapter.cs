@@ -19,7 +19,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
     public void AddAttribute(string name, string value)
     {
-      element.Attributes.Append(element.OwnerDocument.CreateAttribute(name)).Value = value;
+      element.Attributes.Append(element.OwnerDocument.CreateAttribute(name)).Value = value ?? "null";
     }
 
     public string Value
@@ -53,6 +53,13 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlElement el = element.OwnerDocument.CreateElement(name);
       element.AppendChild(el);
       return new SystemXmlAdapter(el);
+    }
+
+    public void AddChild(string name, string value)
+    {
+      XmlElement el = element.OwnerDocument.CreateElement(name);
+      element.AppendChild(el);
+      el.InnerText = value ?? "null";
     }
 
     public IEnumerable<IDataAdapter> GetChildren()
