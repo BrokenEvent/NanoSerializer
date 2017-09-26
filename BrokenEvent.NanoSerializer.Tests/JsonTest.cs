@@ -237,7 +237,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.NotNull(bEl);
 
       AssertChildren(1, aEl);
-      AssertAttribute("1", SerializationBase.ATTRIBUTE_OBJID, bEl);
+      AssertAttribute("2", SerializationBase.ATTRIBUTE_OBJID, bEl);
 
       PolymorphismTestClass b = Deserializer.Deserialize<PolymorphismTestClass>((NewtonsoftJsonAdapter)target);
 

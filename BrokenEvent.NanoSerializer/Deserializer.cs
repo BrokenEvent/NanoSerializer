@@ -39,9 +39,10 @@ namespace BrokenEvent.NanoSerializer
     /// <exception cref="SerializationException">thrown when deserialization fails</exception>
     public T DeserializeObject<T>(IDataAdapter data)
     {
-      string flagsStr = data.GetSystemAttribute(ATTRIBUTE_FLAGS);
-      if (flagsStr != null)
-        flags = (OptimizationFlags)int.Parse(flagsStr);
+      maxObjId = 1;
+      objectCache.Clear();
+      flags = (OptimizationFlags)data.GetIntValue(ATTRIBUTE_FLAGS, true);
+
       return (T)DeserializeObject(typeof(T), data, null);
     }
 
@@ -53,16 +54,17 @@ namespace BrokenEvent.NanoSerializer
     /// <param name="data">Data source to deserialize from</param>
     public void FillObject<T>(T target, IDataAdapter data)
     {
-      string flagsStr = data.GetSystemAttribute(ATTRIBUTE_FLAGS);
-      if (flagsStr != null)
-        flags = (OptimizationFlags)int.Parse(flagsStr);
+      maxObjId = 1;
+      objectCache.Clear();
+      flags = (OptimizationFlags)data.GetIntValue(ATTRIBUTE_FLAGS, true); 
+
       TypeWrapper wrapper = TypeCache.GetWrapper(typeof(T));
       FillObject(wrapper, target, data);
     }
 
     private Dictionary<int, object> objectCache = new Dictionary<int, object>();
     private Dictionary<string, object> constructorArgs = new Dictionary<string, object>();
-    private int maxObjId = 0;
+    private int maxObjId = 1;
     private OptimizationFlags flags;
 
     private TypeResolverDelegate typeResolverDelegate = DefaultTypeResolver;
@@ -146,21 +148,16 @@ namespace BrokenEvent.NanoSerializer
         return target;
       }
 
-      int objId = -1;
-
       // resolve reference, if any
       if (type.IsClass && (flags & OptimizationFlags.NoReferences) == 0)
       {
-        string objIdStr = data.GetSystemAttribute(ATTRIBUTE_OBJID);
-        if (objIdStr != null)
-        {
-          objId = int.Parse(objIdStr);
-          return objectCache[objId];
-        }
+        int id = (int)data.GetIntValue(ATTRIBUTE_OBJID, true);
+        if (id > 0)
+          return objectCache[id];
       }
 
       // fix type, if needed
-      string typeName = data.GetSystemAttribute(ATTRIBUTE_TYPE);
+      string typeName = data.GetStringValue(ATTRIBUTE_TYPE, true);
       if (typeName != null)
       {
         type = InternalResolveTypes(typeName);
@@ -170,7 +167,7 @@ namespace BrokenEvent.NanoSerializer
 
       // primitive type?
       if (IsPrimitive(type))
-        return DeserializePrimitive(type, data.GetValue());
+        return DeserializePrimitive(type, data, (flags & OptimizationFlags.EnumAsValue) != 0);
 
       if ((flags & OptimizationFlags.NoContainers) == 0)
       {
@@ -204,9 +201,13 @@ namespace BrokenEvent.NanoSerializer
         if (property.TypeCategory == TypeCategory.Primitive ||
             property.TypeCategory == TypeCategory.Enum)
         {
-          string stringValue = ReadString(data, property.Location, property.Name);
-          if (stringValue != null)
-            value = DeserializePrimitive(property.MemberType, stringValue);
+          value = DeserializePrimitive(
+              property.MemberType,
+              data,
+              property.Name,
+              property.Location != NanoLocation.SubNode,
+              (flags & OptimizationFlags.EnumAsValue) != 0
+            );
         }
         else
         {
@@ -230,9 +231,13 @@ namespace BrokenEvent.NanoSerializer
         if (field.TypeCategory == TypeCategory.Primitive ||
             field.TypeCategory == TypeCategory.Enum)
         {
-          string stringValue = ReadString(data, field.Location, field.Name);
-          if (stringValue != null)
-            value = DeserializePrimitive(field.MemberType, stringValue);
+          value = DeserializePrimitive(
+              field.MemberType,
+              data,
+              field.Name,
+              field.Location != NanoLocation.SubNode,
+              (flags & OptimizationFlags.EnumAsValue) != 0
+            );
         }
         else
         {
@@ -283,9 +288,16 @@ namespace BrokenEvent.NanoSerializer
           if (!property.Info.CanWrite)
             continue;
 
-          string stringValue = ReadString(data, property.Location, property.Name);
-          if (stringValue != null)
-            property.SetValue(target, DeserializePrimitive(property.MemberType, stringValue));
+          property.SetValue(
+              target,
+              DeserializePrimitive(
+                  property.MemberType,
+                  data,
+                  property.Name,
+                  property.Location != NanoLocation.SubNode,
+                  (flags & OptimizationFlags.EnumAsValue) != 0
+                )
+            );
         }
         else
         {
@@ -313,9 +325,16 @@ namespace BrokenEvent.NanoSerializer
         if (field.TypeCategory == TypeCategory.Primitive ||
             field.TypeCategory == TypeCategory.Enum)
         {
-          string stringValue = ReadString(data, field.Location, field.Name);
-          if (stringValue != null)
-            field.SetValue(target, DeserializePrimitive(field.Info.FieldType, stringValue));
+          field.SetValue(
+              target,
+              DeserializePrimitive(
+                  field.MemberType,
+                  data,
+                  field.Name,
+                  field.Location != NanoLocation.SubNode,
+                  (flags & OptimizationFlags.EnumAsValue) != 0
+                )
+            );
         }
         else
         {
@@ -328,15 +347,6 @@ namespace BrokenEvent.NanoSerializer
           }
         }
       }
-    }
-
-    private static string ReadString(IDataAdapter data, NanoLocation location, string name)
-    {
-      if (location == NanoLocation.Attribute)
-        return data.GetAttribute(name);
-
-      IDataAdapter e = data.GetChild(name);
-      return e?.GetValue();
     }
 
     private void DeserializeContainer(ref object container, Type type, Type elementType, IDataAdapter data, string addMethodName, bool reverse = false)
@@ -353,7 +363,7 @@ namespace BrokenEvent.NanoSerializer
 
       if (elementType.IsPrimitive)
       {
-        byte[] buffer = Convert.FromBase64String(data.GetValue());
+        byte[] buffer = Convert.FromBase64String(data.GetStringValue());
         int size = ByteUtils.GetSizeOf(elementType);
         int count = buffer.Length / size;
         Func<byte[], int, object> reader = ByteUtils.GetBinaryReader(elementType);
@@ -399,7 +409,7 @@ namespace BrokenEvent.NanoSerializer
       {
         if (elementType.IsPrimitive)
         {
-          byte[] buffer = Convert.FromBase64String(data.GetValue());
+          byte[] buffer = Convert.FromBase64String(data.GetStringValue());
           int size = ByteUtils.GetSizeOf(elementType);
           int count = array.GetLength(r);
           Func<byte[], int, object> reader = ByteUtils.GetBinaryReader(elementType);
@@ -435,7 +445,7 @@ namespace BrokenEvent.NanoSerializer
     {
       if (index == lengths.Length - 1 && elementType.IsPrimitive)
       {
-        string value = data.GetValue();
+        string value = data.GetStringValue();
         lengths[index] = ByteUtils.GetBytesInBase64(value) / ByteUtils.GetSizeOf(elementType);
         return;
       }
@@ -461,8 +471,9 @@ namespace BrokenEvent.NanoSerializer
       if (category == TypeCategory.Array)
       {
         Type elementType = type.GetElementType();
-        string rankString = data.GetSystemAttribute(ATTRIBUTE_ARRAY_RANK);
-        int rank = rankString == null ? 1 : int.Parse(rankString);
+        int rank = (int)data.GetIntValue(ATTRIBUTE_ARRAY_RANK, true);
+        if (rank == 0)
+          rank = 1;
 
         int[] lengths = new int[rank];
         ScanArrayRanks(data, elementType, lengths, 0);

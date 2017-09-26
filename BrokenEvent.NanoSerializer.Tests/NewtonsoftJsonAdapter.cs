@@ -60,16 +60,6 @@ namespace BrokenEvent.NanoSerializer.Tests
         owner.Add(new JProperty(itemName, token));
     }
 
-    public void AddSystemAttribute(string name, string value)
-    {
-      AddChild("@" + name, value);
-    }
-
-    public void AddAttribute(string name, string value)
-    {
-      AddChild("@" + name, value);
-    }
-
     public IDataAdapter AddChild(string name)
     {
       EnsureObject();
@@ -90,7 +80,47 @@ namespace BrokenEvent.NanoSerializer.Tests
       return new NewtonsoftJsonAdapter(child);
     }
 
-    public void AddValue(string value)
+    public void AddStringValue(string value, string name, bool isAttribute)
+    {
+      if (isAttribute)
+        name = "@" + name;
+      EnsureObject();
+      jObject.Add(name, new JValue(value));
+    }
+
+    public void AddIntValue(long value, string name, bool isAttribute)
+    {
+      if (isAttribute)
+        name = "@" + name;
+      EnsureObject();
+      jObject.Add(name, new JValue(value));
+    }
+
+    public void AddFloatValue(double value, string name, bool isAttribute)
+    {
+      if (isAttribute)
+        name = "@" + name;
+      EnsureObject();
+      jObject.Add(name, new JValue(value));
+    }
+
+    public void AddBoolValue(bool value, string name, bool isAttribute)
+    {
+      if (isAttribute)
+        name = "@" + name;
+      EnsureObject();
+      jObject.Add(name, new JValue(value));
+    }
+
+    public void AddNullValue(string name, bool isAttribute)
+    {
+      if (isAttribute)
+        name = "@" + name;
+      EnsureObject();
+      jObject.Add(name, null);
+    }
+
+    public void SetStringValue(string value)
     {
       if (jObject != null)
       {
@@ -104,24 +134,60 @@ namespace BrokenEvent.NanoSerializer.Tests
       AddSelfToOwner(jValue = new JValue(value));
     }
 
-    public string GetValue()
+    public void SetIntValue(long value)
     {
-      if (jValue != null)
-        return jValue.Value<string>();
-      JToken token = jObject[VALUE_NAME];
-      if (token == null || token.Type == JTokenType.Null)     
-        return null;
+      if (jObject != null)
+      {
+        jObject.Add(VALUE_NAME, value);
+        return;
+      }
 
-      return token.Value<string>();
+      if (jValue != null)
+        throw new Exception("Unable to set value twice");
+
+      AddSelfToOwner(jValue = new JValue(value));
     }
 
-    public void AddChild(string name, string value)
+    public void SetFloatValue(double value)
     {
-      EnsureObject();
-      if (value == null)
-        jObject.Add(name, null);
-      else
-        jObject.Add(name, new JValue(value));
+      if (jObject != null)
+      {
+        jObject.Add(VALUE_NAME, value);
+        return;
+      }
+
+      if (jValue != null)
+        throw new Exception("Unable to set value twice");
+
+      AddSelfToOwner(jValue = new JValue(value));
+    }
+
+    public void SetBoolValue(bool value)
+    {
+      if (jObject != null)
+      {
+        jObject.Add(VALUE_NAME, value);
+        return;
+      }
+
+      if (jValue != null)
+        throw new Exception("Unable to set value twice");
+
+      AddSelfToOwner(jValue = new JValue(value));
+    }
+
+    public void SetNullValue()
+    {
+      if (jObject != null)
+      {
+        jObject.Add(VALUE_NAME, null);
+        return;
+      }
+
+      if (jValue != null)
+        throw new Exception("Unable to set value twice");
+
+      AddSelfToOwner(jValue = new JValue((object)null));
     }
 
     public IDataAdapter AddArrayValue()
@@ -140,22 +206,6 @@ namespace BrokenEvent.NanoSerializer.Tests
     #endregion
 
     #region Read
-
-    public string GetSystemAttribute(string name)
-    {
-      return GetAttribute(name);
-    }
-
-    public string GetAttribute(string name)
-    {
-      if (jObject == null || jObject.Type == JTokenType.Null)
-        return null;
-
-      JToken token = jObject["@" + name];
-      if (token == null || token.Type == JTokenType.Null)
-        return null;
-      return token.Value<string>();
-    }
 
     public IDataAdapter GetChild(string name)
     {
@@ -219,6 +269,80 @@ namespace BrokenEvent.NanoSerializer.Tests
       List<IDataAdapter> list = new List<IDataAdapter>(GetChildren());
       for (int i = list.Count - 1; i >= 0; i--)
         yield return list[i];
+    }
+
+    private JToken GetValue()
+    {
+      if (jValue != null)
+        return jValue;
+      JToken token = jObject[VALUE_NAME];
+      if (token == null || token.Type == JTokenType.Null)
+        return null;
+
+      return token;
+    }
+
+    public string GetStringValue()
+    {
+      JToken value = GetValue();
+      return value?.Value<string>();
+    }
+
+    public long GetIntValue()
+    {
+      JToken value = GetValue();
+      return value != null ? value.Value<int>() : default(int);
+    }
+
+    public double GetFloatValue()
+    {
+      JToken value = GetValue();
+      return value != null ? value.Value<float>() : default(float);
+    }
+
+    public bool GetBoolValue()
+    {
+      JToken value = GetValue();
+      return value != null && value.Value<bool>();
+    }
+
+    private JToken GetValue(string name, bool isAttribute)
+    {
+      if (jObject == null)
+        return null;
+
+      if (isAttribute)
+        name = "@" + name;
+
+      JToken token = jObject[name];
+      if (token == null || token.Type == JTokenType.Null)
+        return null;
+
+      return token;
+    }
+
+    public string GetStringValue(string name, bool isAttribute)
+    {
+      JToken token = GetValue(name, isAttribute);
+      return token == null ? null : token.Value<string>();
+    }
+
+    public long GetIntValue(string name, bool isAttribute)
+    {
+      JToken token = GetValue(name, isAttribute);
+      return token == null ? default(int) : token.Value<int>();
+    }
+
+    public double GetFloatValue(string name, bool isAttribute)
+    {
+      JToken token = GetValue(name, isAttribute);
+      return token == null ? default(float) : token.Value<float>();
+    }
+
+    public bool GetBoolValue(string name, bool isAttribute)
+    {
+      JToken token = GetValue(name, isAttribute);
+      return token != null && token.Value<bool>();
     }
 
     #endregion

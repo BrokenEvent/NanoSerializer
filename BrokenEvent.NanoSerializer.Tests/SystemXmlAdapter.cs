@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Xml;
 
 using BrokenEvent.NanoSerializer.Adapter;
@@ -14,41 +15,114 @@ namespace BrokenEvent.NanoSerializer.Tests
       this.element = element;
     }
 
-    public void AddSystemAttribute(string name, string value)
+    public void AddStringValue(string value, string name, bool isAttribute)
     {
-      AddAttribute(name, value);
+      if (isAttribute)
+        element.Attributes.Append(element.OwnerDocument.CreateAttribute(name)).Value = value;
+      else
+      { 
+        XmlElement el = element.OwnerDocument.CreateElement(name);
+        element.AppendChild(el);
+        el.InnerText = value;
+      }
     }
 
-    public void AddAttribute(string name, string value)
+    public void AddIntValue(long value, string name, bool isAttribute)
     {
-      element.Attributes.Append(element.OwnerDocument.CreateAttribute(name)).Value = value ?? "null";
+      AddStringValue(value.ToString(), name, isAttribute);
     }
 
-    public string Value
+    public void AddFloatValue(double value, string name, bool isAttribute)
     {
-      get { return element.InnerText; }
-      set { element.InnerText = value; }
+      AddStringValue(value.ToString(CultureInfo.InvariantCulture), name, isAttribute);
     }
 
-    public void AddValue(string value)
+    public void AddBoolValue(bool value, string name, bool isAttribute)
+    {
+      AddStringValue(value.ToString(), name, isAttribute);
+    }
+
+    public void AddNullValue(string name, bool isAttribute)
+    {
+      AddStringValue("null", name, isAttribute);
+    }
+
+    public void SetStringValue(string value)
     {
       element.InnerText = value;
     }
 
-    public string GetValue()
+    public void SetIntValue(long value)
+    {
+      SetStringValue(value.ToString());
+    }
+
+    public void SetFloatValue(double value)
+    {
+      SetStringValue(value.ToString());
+    }
+
+    public void SetBoolValue(bool value)
+    {
+      SetStringValue(value.ToString());
+    }
+
+    public void SetNullValue()
+    {
+      SetStringValue("null");
+    }
+
+    public string GetStringValue()
     {
       return element.InnerText;
     }
 
-    public string GetSystemAttribute(string name)
+    public long GetIntValue()
     {
-      return GetAttribute(name);
+      return long.Parse(element.InnerText);
     }
 
-    public string GetAttribute(string name)
+    public double GetFloatValue()
     {
-      string result = element.GetAttribute(name);
-      return string.IsNullOrWhiteSpace(result) ? null : result;
+      return double.Parse(element.InnerText, CultureInfo.InvariantCulture);
+    }
+
+    public bool GetBoolValue()
+    {
+      return bool.Parse(element.InnerText);
+    }
+
+    public string GetStringValue(string name, bool isAttribute)
+    {
+      if (isAttribute)
+      {
+        string result = element.GetAttribute(name);
+        return string.IsNullOrEmpty(result) ? null : result;
+      }
+
+      foreach (XmlNode node in element.ChildNodes)
+        if (node.NodeType == XmlNodeType.Element && node.Name == name)
+          return node.InnerText;
+
+      return null;
+    }
+
+    public long GetIntValue(string name, bool isAttribute)
+    {
+      string str = GetStringValue(name, isAttribute);
+      return str == null ? default(long) : long.Parse(str);
+    }
+
+    public double GetFloatValue(string name, bool isAttribute)
+    {
+      string str = GetStringValue(name, isAttribute);
+      return str == null ? default(double) : double.Parse(str);
+    }
+
+    public bool GetBoolValue(string name, bool isAttribute)
+    {
+      string str = GetStringValue(name, isAttribute);
+      return str != null && bool.Parse(str);
     }
 
     public IDataAdapter GetChild(string name)
@@ -65,13 +139,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlElement el = element.OwnerDocument.CreateElement(name);
       element.AppendChild(el);
       return new SystemXmlAdapter(el);
-    }
-
-    public void AddChild(string name, string value)
-    {
-      XmlElement el = element.OwnerDocument.CreateElement(name);
-      element.AppendChild(el);
-      el.InnerText = value ?? "null";
     }
 
     public IEnumerable<IDataAdapter> GetChildren()

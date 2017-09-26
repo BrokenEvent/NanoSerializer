@@ -9,13 +9,13 @@ namespace BrokenEvent.NanoSerializer.Tests.Mocks
 
     void INanoSerializable.Serialize(IDataAdapter data, ISubSerializer subSerializer)
     {
-      data.AddAttribute("1", A);
+      data.AddStringValue(A, "1", true);
       subSerializer.ContinueSerialization(typeof(object), B, data.AddChild("1").AddChild("2"));
     }
 
     void INanoSerializable.Deserialize(IDataAdapter data, ISubDeserializer subDeserializer)
     {
-      A = data.GetAttribute("1");
+      A = data.GetStringValue("1", true);
 
       object b = null;
       subDeserializer.ContinueDeserialization(typeof(object), data.GetChild("1").GetChild("2"), ref b);

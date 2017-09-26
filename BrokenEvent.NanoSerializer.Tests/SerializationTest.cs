@@ -459,7 +459,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.NotNull(bEl);
       Assert.AreEqual(0, bEl.ChildNodes.Count);
       Assert.AreEqual(1, bEl.Attributes.Count);
-      Assert.AreEqual("1", bEl.GetAttribute(SerializationBase.ATTRIBUTE_OBJID));
+      Assert.AreEqual("2", bEl.GetAttribute(SerializationBase.ATTRIBUTE_OBJID));
 
       PolymorphismTestClass b = Deserializer.Deserialize<PolymorphismTestClass>((SystemXmlAdapter)target);
 
@@ -485,7 +485,7 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       Assert.AreEqual(0, aEl.ChildNodes.Count);
       Assert.AreEqual(1, aEl.Attributes.Count);
-      Assert.AreEqual("0", aEl.GetAttribute(SerializationBase.ATTRIBUTE_OBJID));
+      Assert.AreEqual("1", aEl.GetAttribute(SerializationBase.ATTRIBUTE_OBJID));
 
       PolymorphismTestClass b = Deserializer.Deserialize<PolymorphismTestClass>((SystemXmlAdapter)target);
 

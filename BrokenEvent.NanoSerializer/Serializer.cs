@@ -30,9 +30,6 @@ namespace BrokenEvent.NanoSerializer
         Category = category;
         GenericArgs = genericArgs;
       }
-
-      public Info(string name, NanoLocation location, Type type):
-        this(name, location, GetTypeCategory(type), type.IsGenericType ? type.GetGenericArguments() : null) { }
     }
 
     /// <summary>
@@ -56,7 +53,7 @@ namespace BrokenEvent.NanoSerializer
     }
 
     private Dictionary<object, int> objectsCache = new Dictionary<object, int>();
-    private int maxObjId = 0;
+    private int maxObjId = 1;
     private bool haveContainers = false;
     private bool haveReferences = false;
     private bool havePrivateProperties = false;
@@ -109,9 +106,11 @@ namespace BrokenEvent.NanoSerializer
         flags |= OptimizationFlags.NoReferences;
       if (havePrivateProperties)
         flags |= OptimizationFlags.PrivateProperties;
+      if (settings.EnumsAsValue)
+        flags |= OptimizationFlags.EnumAsValue;
 
       if (flags != 0)
-        data.AddSystemAttribute(ATTRIBUTE_FLAGS, ((int)flags).ToString());
+        data.AddIntValue((long)flags, ATTRIBUTE_FLAGS, true);
     }
 
     private void SerializeValue(IDataAdapter data, object target)
@@ -146,12 +145,7 @@ namespace BrokenEvent.NanoSerializer
         if (value != null)
           SerializeValue(property.MemberType, value, data, new Info(property), isReadOnly);
         else if (settings.SerializeNull)
-        {
-          if (property.Location == NanoLocation.SubNode)
-            data.AddChild(property.Name, null);
-          else
-            data.AddAttribute(property.Name, null);
-        }
+          data.AddNullValue(property.Name, property.Location != NanoLocation.SubNode);
       }
 
       for (int i = 0; i < wrapper.Fields.Count; i++)
@@ -165,31 +159,31 @@ namespace BrokenEvent.NanoSerializer
         if (value != null)
           SerializeValue(field.MemberType, value, data, new Info(field), false);
         else if (settings.SerializeNull)
-        {
-          if (field.Location == NanoLocation.SubNode)
-            data.AddChild(field.Name, null);
-          else
-            data.AddAttribute(field.Name, null);
-        }
+          data.AddNullValue(field.Name, field.Location != NanoLocation.SubNode);
       }
     }
 
     private void SerializeValue(Type type, object value, IDataAdapter data, Info info, bool isReadOnly)
     {
-      if (info.Category == TypeCategory.Primitive ||
-          info.Category == TypeCategory.Enum)
+      if (info.Category == TypeCategory.Primitive)
       {
         // no need to serialize
         if (isReadOnly)
           return;
 
-        string stringValue = info.Category == TypeCategory.Primitive ? value.ToString() : SerializeEnum(value);
+        SerializePrimitive(type, value, data, info.Name, info.Location != NanoLocation.SubNode);
+        return;
+      }
+      if (info.Category == TypeCategory.Enum)
+      {
+        // no need to serialize
+        if (isReadOnly)
+          return;
 
-        if (info.Location == NanoLocation.SubNode)
-          data.AddChild(info.Name, stringValue);
+        if (settings.EnumsAsValue)
+          data.AddIntValue(((IConvertible)value).ToInt64(null), info.Name, info.Location != NanoLocation.SubNode);
         else
-          data.AddAttribute(info.Name, stringValue);
-
+          data.AddStringValue(value.ToString(), info.Name, info.Location != NanoLocation.SubNode);
         return;
       }
 
@@ -206,7 +200,7 @@ namespace BrokenEvent.NanoSerializer
       int objId;
       if (settings.EnableObjectCache && type.IsClass && objectsCache.TryGetValue(value, out objId))
       {
-        data.AddSystemAttribute(ATTRIBUTE_OBJID, objId.ToString());
+        data.AddIntValue(objId, ATTRIBUTE_OBJID, true);
         haveReferences = true;
         return;
       }
@@ -215,7 +209,7 @@ namespace BrokenEvent.NanoSerializer
       if (targetType != type)
       {
         if (settings.EnableTypeMarkers)
-          data.AddSystemAttribute(ATTRIBUTE_TYPE, TypeCache.GetTypeFullName(targetType, settings.AssemblyQualifiedNames));
+          data.AddStringValue(TypeCache.GetTypeFullName(targetType, settings.AssemblyQualifiedNames), ATTRIBUTE_TYPE, true);
         type = targetType;
         genericArgs = type.GetGenericArguments();
       }
@@ -225,10 +219,13 @@ namespace BrokenEvent.NanoSerializer
       switch (category)
       {
         case TypeCategory.Primitive:
-          data.AddValue(value.ToString());
+          data.SetStringValue(value.ToString());
           break;
         case TypeCategory.Enum:
-          data.AddValue(SerializeEnum(value));
+          if (settings.EnumsAsValue)
+            data.SetIntValue(((IConvertible)value).ToInt64(null));
+          else
+            data.SetStringValue(value.ToString());
           break;
         case TypeCategory.Unknown:
           SerializeValue(data, value);
@@ -237,14 +234,6 @@ namespace BrokenEvent.NanoSerializer
           SerializeContainer(value, data, category, genericArgs);
           break;
       }
-    }
-
-    private string SerializeEnum(object value)
-    {
-      if (settings.EnumsAsValue)
-        return ((IConvertible)value).ToInt64(null).ToString();
-
-      return value.ToString();
     }
 
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
@@ -267,7 +256,7 @@ namespace BrokenEvent.NanoSerializer
           writer(buffer, index, o);
           index += size;
         }
-        data.AddValue(Convert.ToBase64String(buffer));
+        data.SetStringValue(Convert.ToBase64String(buffer));
       }
       else
       {
@@ -297,7 +286,7 @@ namespace BrokenEvent.NanoSerializer
             writer(buffer, index, array.GetValue(coords));
             index += size;
           }
-          data.AddValue(Convert.ToBase64String(buffer));
+          data.SetStringValue(Convert.ToBase64String(buffer));
         }
         else
         {
@@ -331,7 +320,7 @@ namespace BrokenEvent.NanoSerializer
         Type elementType = type.GetElementType();
         int[] coords = new int[array.Rank];
         if (array.Rank > 1)
-          data.AddSystemAttribute(ATTRIBUTE_ARRAY_RANK, array.Rank.ToString());
+          data.AddIntValue(array.Rank, ATTRIBUTE_ARRAY_RANK, true);
         SerializeArrayRank(array, elementType, coords, 0, data);
 
         haveContainers = true;
