@@ -146,8 +146,16 @@ namespace BrokenEvent.NanoSerializer.Tests
     [STAThread]
     static void Main()
     {
-      /*PerfTest.TestPerformance();
-      Console.ReadLine();*/
+      Console.Write("Run reflection performance test? ");
+      ConsolePos answerPos = new ConsolePos(true);
+      Console.Write("y");
+      answerPos.Restore();
+      string answer = Console.ReadLine();
+      if (answer == "y" || answer == "")
+      {
+        PerfTest.TestPerformance();
+        Console.ReadLine();
+      }
 
       WriteWarmUp("Model");
       ModelClass target = ModelClass.BuildObjectsModel(5, 3);
