@@ -37,9 +37,9 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adapter\IBaseData.cs" />
     <Compile Include="Adapter\IDataAdapter.cs" />
     <Compile Include="Adapter\IDataArray.cs" />
+    <Compile Include="Adapter\UntypedDataAdapter.cs" />
     <Compile Include="ByteUtils.cs" />
     <Compile Include="Caching\TypeCategory.cs" />
     <Compile Include="Caching\FieldWrapper.cs" />

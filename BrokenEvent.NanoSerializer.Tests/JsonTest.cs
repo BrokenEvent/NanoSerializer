@@ -221,6 +221,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       };
 
       JObject target = new JObject();
+
       Serializer.Serialize((NewtonsoftJsonAdapter)target, a);
 
       AssertChildren(3, target);

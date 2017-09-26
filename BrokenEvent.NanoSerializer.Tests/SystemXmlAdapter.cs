@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
-using System.Globalization;
 using System.Xml;
 
 using BrokenEvent.NanoSerializer.Adapter;
 
 namespace BrokenEvent.NanoSerializer.Tests
 {
-  public class SystemXmlAdapter: IDataAdapter, IDataArray
+  public class SystemXmlAdapter: UntypedDataAdapter, IDataArray
   {
     private readonly XmlElement element;
 
@@ -15,7 +14,9 @@ namespace BrokenEvent.NanoSerializer.Tests
       this.element = element;
     }
 
-    public void AddStringValue(string value, string name, bool isAttribute)
+    #region IDataAdapter
+
+    public override void AddStringValue(string value, string name, bool isAttribute)
     {
       if (isAttribute)
         element.Attributes.Append(element.OwnerDocument.CreateAttribute(name)).Value = value;
@@ -27,72 +28,17 @@ namespace BrokenEvent.NanoSerializer.Tests
       }
     }
 
-    public void AddIntValue(long value, string name, bool isAttribute)
-    {
-      AddStringValue(value.ToString(), name, isAttribute);
-    }
-
-    public void AddFloatValue(double value, string name, bool isAttribute)
-    {
-      AddStringValue(value.ToString(CultureInfo.InvariantCulture), name, isAttribute);
-    }
-
-    public void AddBoolValue(bool value, string name, bool isAttribute)
-    {
-      AddStringValue(value.ToString(), name, isAttribute);
-    }
-
-    public void AddNullValue(string name, bool isAttribute)
-    {
-      AddStringValue("null", name, isAttribute);
-    }
-
-    public void SetStringValue(string value)
+    public override void SetStringValue(string value)
     {
       element.InnerText = value;
     }
 
-    public void SetIntValue(long value)
-    {
-      SetStringValue(value.ToString());
-    }
-
-    public void SetFloatValue(double value)
-    {
-      SetStringValue(value.ToString());
-    }
-
-    public void SetBoolValue(bool value)
-    {
-      SetStringValue(value.ToString());
-    }
-
-    public void SetNullValue()
-    {
-      SetStringValue("null");
-    }
-
-    public string GetStringValue()
+    public override string GetStringValue()
     {
       return element.InnerText;
     }
 
-    public long GetIntValue()
-    {
-      return long.Parse(element.InnerText);
-    }
-
-    public double GetFloatValue()
-    {
-      return double.Parse(element.InnerText, CultureInfo.InvariantCulture);
-    }
-
-    public bool GetBoolValue()
-    {
-      return bool.Parse(element.InnerText);
-    }
-
-    public string GetStringValue(string name, bool isAttribute)
+    public override string GetStringValue(string name, bool isAttribute)
     {
       if (isAttribute)
       {
@@ -107,25 +53,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       return null;
     }
 
-    public long GetIntValue(string name, bool isAttribute)
-    {
-      string str = GetStringValue(name, isAttribute);
-      return str == null ? default(long) : long.Parse(str);
-    }
-
-    public double GetFloatValue(string name, bool isAttribute)
-    {
-      string str = GetStringValue(name, isAttribute);
-      return str == null ? default(double) : double.Parse(str);
-    }
-
-    public bool GetBoolValue(string name, bool isAttribute)
-    {
-      string str = GetStringValue(name, isAttribute);
-      return str != null && bool.Parse(str);
-    }
-
-    public IDataAdapter GetChild(string name)
+    public override IDataAdapter GetChild(string name)
     {
       foreach (XmlNode node in element.ChildNodes)
         if (node.NodeType == XmlNodeType.Element && node.Name == name)
@@ -134,11 +62,30 @@ namespace BrokenEvent.NanoSerializer.Tests
       return null;
     }
 
-    public IDataAdapter AddChild(string name)
+    public override IDataAdapter AddChild(string name)
     {
       XmlElement el = element.OwnerDocument.CreateElement(name);
       element.AppendChild(el);
       return new SystemXmlAdapter(el);
+    }
+
+    public override IDataArray AddArray()
+    {
+      return this;
+    }
+
+    public override IDataArray GetArray()
+    {
+      return this;
+    }
+
+    #endregion
+
+    #region IDataArray
+
+    public IDataAdapter AddArrayValue()
+    {
+      return AddChild("Item");
     }
 
     public IEnumerable<IDataAdapter> GetChildren()
@@ -155,24 +102,11 @@ namespace BrokenEvent.NanoSerializer.Tests
           yield return new SystemXmlAdapter((XmlElement)element.ChildNodes[i]);
     }
 
+    #endregion
+
     public static implicit operator SystemXmlAdapter(XmlElement e)
     {
       return new SystemXmlAdapter(e);
-    }
-
-    public IDataArray AddArray()
-    {
-      return this;
-    }
-
-    public IDataArray GetArray()
-    {
-      return this;
-    }
-
-    public IDataAdapter AddArrayValue()
-    {
-      return AddChild("Item");
     }
 
     public static implicit operator SystemXmlAdapter(XmlDocument e)

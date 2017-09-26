@@ -120,74 +120,43 @@ namespace BrokenEvent.NanoSerializer.Tests
       jObject.Add(name, null);
     }
 
-    public void SetStringValue(string value)
+    private void SetValue(JValue value)
     {
       if (jObject != null)
       {
-        jObject.Add(VALUE_NAME, value);
+        jObject.Add(new JProperty(VALUE_NAME, value));
         return;
       }
 
       if (jValue != null)
         throw new Exception("Unable to set value twice");
 
-      AddSelfToOwner(jValue = new JValue(value));
+      AddSelfToOwner(jValue = value);
+    }
+
+    public void SetStringValue(string value)
+    {
+      SetValue(new JValue(value));
     }
 
     public void SetIntValue(long value)
     {
-      if (jObject != null)
-      {
-        jObject.Add(VALUE_NAME, value);
-        return;
-      }
-
-      if (jValue != null)
-        throw new Exception("Unable to set value twice");
-
-      AddSelfToOwner(jValue = new JValue(value));
+      SetValue(new JValue(value));
     }
 
     public void SetFloatValue(double value)
     {
-      if (jObject != null)
-      {
-        jObject.Add(VALUE_NAME, value);
-        return;
-      }
-
-      if (jValue != null)
-        throw new Exception("Unable to set value twice");
-
-      AddSelfToOwner(jValue = new JValue(value));
+      SetValue(new JValue(value));
     }
 
     public void SetBoolValue(bool value)
     {
-      if (jObject != null)
-      {
-        jObject.Add(VALUE_NAME, value);
-        return;
-      }
-
-      if (jValue != null)
-        throw new Exception("Unable to set value twice");
-
-      AddSelfToOwner(jValue = new JValue(value));
+      SetValue(new JValue(value));
     }
 
     public void SetNullValue()
     {
-      if (jObject != null)
-      {
-        jObject.Add(VALUE_NAME, null);
-        return;
-      }
-
-      if (jValue != null)
-        throw new Exception("Unable to set value twice");
-
-      AddSelfToOwner(jValue = new JValue((object)null));
+      SetValue(new JValue((object)null));
     }
 
     public IDataAdapter AddArrayValue()
@@ -250,17 +219,6 @@ namespace BrokenEvent.NanoSerializer.Tests
             yield return new NewtonsoftJsonAdapter((JValue)child);
 
         yield break;
-      }
-
-      foreach (JProperty child in jObject.Properties())
-      {
-        if (child.Name == ARRAY_NAME || child.Name == VALUE_NAME)
-          continue;
-
-        if (child.Value.Type == JTokenType.Object)
-          yield return new NewtonsoftJsonAdapter((JObject)child.Value);
-        else
-          yield return new NewtonsoftJsonAdapter((JValue)child.Value);
       }
     }
 
