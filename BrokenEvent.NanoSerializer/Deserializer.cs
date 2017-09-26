@@ -461,7 +461,10 @@ namespace BrokenEvent.NanoSerializer
       if (category == TypeCategory.Array)
       {
         Type elementType = type.GetElementType();
-        int[] lengths = new int[int.Parse(data.GetSystemAttribute(ATTRIBUTE_ARRAY_RANK))];
+        string rankString = data.GetSystemAttribute(ATTRIBUTE_ARRAY_RANK);
+        int rank = rankString == null ? 1 : int.Parse(rankString);
+
+        int[] lengths = new int[rank];
         ScanArrayRanks(data, elementType, lengths, 0);
 
         Array array;

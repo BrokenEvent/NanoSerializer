@@ -78,6 +78,12 @@ namespace BrokenEvent.NanoSerializer.Tests
 
     public IDataArray AddArray()
     {
+      if (jObject == null)
+      {
+        AddSelfToOwner(jArray = new JArray());
+        return this;
+      }
+
       EnsureObject();
       JArray child = new JArray();
       jObject.Add(ARRAY_NAME, child);
@@ -142,10 +148,9 @@ namespace BrokenEvent.NanoSerializer.Tests
 
     public string GetAttribute(string name)
     {
-      if (jValue != null)
+      if (jObject == null || jObject.Type == JTokenType.Null)
         return null;
-      if (jObject.Type == JTokenType.Null)
-        return null;
+
       JToken token = jObject["@" + name];
       if (token == null || token.Type == JTokenType.Null)
         return null;
@@ -162,6 +167,8 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       if (token.Type == JTokenType.Object)
         return new NewtonsoftJsonAdapter((JObject)token);
+      if (token.Type == JTokenType.Array)
+        return new NewtonsoftJsonAdapter((JArray)token);
 
       return new NewtonsoftJsonAdapter((JValue)token);
     }
@@ -187,6 +194,8 @@ namespace BrokenEvent.NanoSerializer.Tests
         foreach (JToken child in jArray)
           if (child.Type == JTokenType.Object)
             yield return new NewtonsoftJsonAdapter((JObject)child);
+          else if (child.Type == JTokenType.Array)
+            yield return new NewtonsoftJsonAdapter((JArray)child);
           else
             yield return new NewtonsoftJsonAdapter((JValue)child);
 

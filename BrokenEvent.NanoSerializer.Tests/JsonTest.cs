@@ -698,9 +698,6 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       AssertChildren(3, target);
 
-      AssertChildren(1, (JObject)target.GetValue("Ints"));
-      AssertChildren(1, (JObject)target.GetValue("Floats"));
-
       PrimitiveArrayClass b = Deserializer.Deserialize<PrimitiveArrayClass>((NewtonsoftJsonAdapter)target);
 
       for (int i = 0; i < a.Ints.Length; i++)

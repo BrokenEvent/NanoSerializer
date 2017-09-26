@@ -21,10 +21,8 @@
     public SerializationSettings()
     {
       SaveOptimizationFlags = true;
-      ContainerItemName = "Item";
       DictionaryKeyName = "Key";
       DictionaryValueName = "Value";
-      ArrayItemName = "A";
       AssemblyQualifiedNames = true;
       SerializePrivateProperties = false;
       PrimitiveAsBase64 = true;
@@ -50,16 +48,6 @@
     /// Gets or sets the value indicating whether to ignore system NotSerialized attribute.
     /// </summary>
     public bool IgnoreNotSerialized { get; set; }
-
-    /// <summary>
-    /// Gets or sets the node name used for container items. Default is "Item".
-    /// </summary>
-    public string ContainerItemName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the node name used for array items. Default is "A".
-    /// </summary>
-    public string ArrayItemName { get; set; }
 
     /// <summary>
     /// Gets or sets the node name for dictionary keys. Default is "Key".

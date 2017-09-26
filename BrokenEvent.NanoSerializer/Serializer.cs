@@ -330,7 +330,8 @@ namespace BrokenEvent.NanoSerializer
         Array array = (Array)value;
         Type elementType = type.GetElementType();
         int[] coords = new int[array.Rank];
-        data.AddSystemAttribute(ATTRIBUTE_ARRAY_RANK, array.Rank.ToString());
+        if (array.Rank > 1)
+          data.AddSystemAttribute(ATTRIBUTE_ARRAY_RANK, array.Rank.ToString());
         SerializeArrayRank(array, elementType, coords, 0, data);
 
         haveContainers = true;
