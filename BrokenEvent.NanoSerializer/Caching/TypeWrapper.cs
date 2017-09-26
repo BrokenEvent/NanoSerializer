@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 
+using BrokenEvent.NanoSerializer.Adapter;
 using BrokenEvent.NanoSerializer.Custom;
 
 namespace BrokenEvent.NanoSerializer.Caching

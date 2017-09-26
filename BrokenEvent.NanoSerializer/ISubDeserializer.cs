@@ -1,5 +1,7 @@
 ﻿using System;
 
+using BrokenEvent.NanoSerializer.Adapter;
+
 namespace BrokenEvent.NanoSerializer
 {
   /// <summary>

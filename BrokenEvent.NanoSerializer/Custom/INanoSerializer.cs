@@ -1,4 +1,6 @@
-﻿namespace BrokenEvent.NanoSerializer.Custom
+﻿using BrokenEvent.NanoSerializer.Adapter;
+
+namespace BrokenEvent.NanoSerializer.Custom
 {
   /// <summary>
   /// Custom serialization provider for type.

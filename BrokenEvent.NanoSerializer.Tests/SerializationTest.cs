@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Xml;
 
 using BrokenEvent.NanoSerializer.Custom;
+using BrokenEvent.NanoSerializer.Tests.Mocks;
 
 using NUnit.Framework;
 
@@ -35,30 +35,6 @@ namespace BrokenEvent.NanoSerializer.Tests
     private static string GetXmlValue(XmlDocument xml, string name)
     {
       return GetXmlValue(xml.DocumentElement, name);
-    }
-
-    private class ThreeAttrsTestClass
-    {
-      [NanoSerialization(Name = "A_")]
-      public int A;
-      public string B { get; set; }
-      public NanoState C { get; set; }
-
-      public string D { get { return "!!!"; } }
-
-      public static int E = 999;
-
-      private string F { get; set; }
-
-      public string GetPrivate()
-      {
-        return F;
-      }
-
-      public void SetPrivate(string value)
-      {
-        F = value;
-      }
     }
 
     [Test]
@@ -137,13 +113,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.GetPrivate(), c.GetPrivate());
     }
 
-    public struct ThreeAttrsTestStruct
-    {
-      public int A;
-      public string B { get; set; }
-      public NanoState C { get; set; }
-    }
-
     [Test]
     public void EnumAsValue()
     {
@@ -207,20 +176,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.C, b.C);
     }
 
-    private struct ThreeAttrsTestStructCtor
-    {
-      public ThreeAttrsTestStructCtor(int a): this()
-      {
-        A = a;
-      }
-
-      [NanoSerialization(ConstructorArg = 0)]
-      public int A;
-
-      public string B { get; set; }
-      public NanoState C { get; set; }
-    }
-
     [Test]
     public void ThreeAttrsStructCtor()
     {
@@ -244,18 +199,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
-    }
-
-    private class ThreeSubnodesTestClass
-    {
-      [NanoSerialization(Location = NanoLocation.SubNode)]
-      public int A { get; set; }
-      [NanoSerialization(Location = NanoLocation.SubNode, Name = "B_")]
-      public string B { get; set; }
-      [NanoSerialization(Location = NanoLocation.SubNode)]
-      public NanoState C { get; set; }
-      [NanoSerialization(State = NanoState.Ignore)]
-      public int D { get; set; }
     }
 
     [Test]
@@ -288,23 +231,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.A, c.A);
       Assert.AreEqual(a.B, c.B);
       Assert.AreEqual(a.C, c.C);
-    }
-
-    public class CustomConstructorTestClass
-    {
-      public CustomConstructorTestClass(string b, NanoState c, int a)
-      {
-        A = a;
-        B = b;
-        C = c;
-      }
-
-      [NanoSerialization(Location = NanoLocation.SubNode, ConstructorArg = 2)]
-      public int A { get; private set; }
-      [NanoSerialization(ConstructorArg = 0)]
-      public string B { get; private set; }
-      [NanoSerialization(ConstructorArg = 1)]
-      public NanoState C { get; private set; }
     }
 
     [Test]
@@ -344,11 +270,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
-    }
-
-    private class ComplexTestClass: ThreeAttrsTestClass
-    {
-      public CustomConstructorTestClass F { get; set; }
     }
 
     [Test]
@@ -424,12 +345,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.B, b.B);
       Assert.AreEqual(a.C, b.C);
       Assert.AreEqual(a.D, b.D);
-    }
-
-    public class PolymorphismTestClass
-    {
-      public object A { get; set; }
-      public object B { get; set; }
     }
 
     [Test]
@@ -577,11 +492,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(b.A, b);
     }
 
-    private class ArrayClass
-    {
-      public byte[] Bytes;
-    }
-
     [Test]
     public void Array()
     {
@@ -617,11 +527,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.IsNull(b.Bytes);
     }
 
-    private class IListClass
-    {
-      public IList<string> Strings;
-    }
-
     [Test]
     public void List()
     {
@@ -641,17 +546,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       for (int i = 0; i < a.Strings.Count; i++)
         Assert.AreEqual(a.Strings[i], b.Strings[i]);
     }
-
-    private class ReadOnlyListClass
-    {
-      public ReadOnlyListClass()
-      {
-        Strings = new List<string>();
-      }
-
-      public IList<string> Strings { get; }
-    }
-
     [Test]
     public void ReadOnlyList()
     {
@@ -669,11 +563,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.Strings.Count, b.Strings.Count);
       for (int i = 0; i < a.Strings.Count; i++)
         Assert.AreEqual(a.Strings[i], b.Strings[i]);
-    }
-
-    private class SquareArrayClass
-    {
-      public string[,] Bytes;
     }
 
     [Test]
@@ -695,11 +584,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       for (int x = 0; x < a.Bytes.GetLength(0); x++)
         for (int y = 0; y < a.Bytes.GetLength(1); y++)
           Assert.AreEqual(a.Bytes[x, y], b.Bytes[x, y]);
-    }
-
-    private class TriangleArrayClass
-    {
-      public string[][] Bytes;
     }
 
     [Test]
@@ -724,11 +608,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       for (int x = 0; x < a.Bytes.Length; x++)
         for (int y = 0; y < a.Bytes[x].Length; y++)
           Assert.AreEqual(a.Bytes[x][y], b.Bytes[x][y]);
-    }
- 
-    private class QueueClass
-    {
-      public Queue<string> Strings;
     }
 
     [Test]
@@ -762,11 +641,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       }
     }
 
-    private class NonGenericQueueClass
-    {
-      public Queue Strings;
-    }
-
     [Test]
     public void NonGenericQueue()
     {
@@ -796,11 +670,6 @@ namespace BrokenEvent.NanoSerializer.Tests
 
         Assert.AreEqual(a.Strings.Dequeue(), b.Strings.Dequeue());
       }
-    }
-
-    private class StackClass
-    {
-      public Stack<string> Strings;
     }
 
     [Test]
@@ -834,11 +703,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       }
     }
 
-    private class NonGenericStackClass
-    {
-      public Stack Strings;
-    }
-
     [Test]
     public void NonGenericStack()
     {
@@ -870,11 +734,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       }
     }
 
-    private class SetClass
-    {
-      public ISet<string> Strings;
-    }
-
     [Test]
     public void Set()
     { 
@@ -891,11 +750,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       SetClass b = Deserializer.Deserialize<SetClass>((SystemXmlAdapter)target);
 
       Assert.IsTrue(a.Strings.SetEquals(b.Strings));
-    }
-
-    private class LinkedListClass
-    {
-      public LinkedList<string> Strings;
     }
 
     [Test]
@@ -933,11 +787,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       bEnum.Dispose();
     }
 
-    private class DictionaryClass
-    {
-      public Dictionary<string, string> Strings;
-    }
-
     [Test]
     public void Dictionary()
     {
@@ -961,24 +810,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       foreach (KeyValuePair<string, string> pair in a.Strings)
       {
         Assert.AreEqual(pair.Value, b.Strings[pair.Key]);
-      }
-    }
-
-    public class CustomConstructorArgClass
-    {
-      [NanoSerialization(ConstructorArg = 0)]
-      public string A { get; private set; }
-
-      [NanoSerialization(State = NanoState.Ignore)]
-      public string B { get; private set; }
-
-      public CustomConstructorArgClass() { }
-
-      [NanoConstructor]
-      public CustomConstructorArgClass(string a, [NanoArg("testArg")]string b)
-      {
-        A = a;
-        B = b;
       }
     }
 
@@ -1020,36 +851,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.IsNull(b.B);
     }
 
-    private class SerializeSetClass
-    {
-      private string a;
-      private string b;
-      [NanoSerialization(ConstructorArg = 1)]
-      public readonly string c;
-
-      public string A
-      {
-        get { return a; }
-      }
-
-      [NanoSerialization(ConstructorArg = 0, State = NanoState.SerializeSet)]
-      public string B
-      {
-        get { return b; }
-        set
-        {
-          b = value;
-          a = value;
-        }
-      }
-
-      public SerializeSetClass(string a, string c)
-      {
-        this.a = a;
-        this.c = c;
-      }
-    }
-
     [Test]
     public void SerializeSet()
     {
@@ -1071,27 +872,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(a.c, b.c);
     }
 
-    private class NanoSerializableClass: INanoSerializable
-    {
-      public string A { get; set; }
-      public object B { get; set; }
-
-      void INanoSerializable.Serialize(IDataAdapter data, ISubSerializer subSerializer)
-      {
-        data.AddAttribute("1", A);
-        subSerializer.ContinueSerialization(typeof(object), B, data.AddChild("1").AddChild("2"));
-      }
-
-      void INanoSerializable.Deserialize(IDataAdapter data, ISubDeserializer subDeserializer)
-      {
-        A = data.GetAttribute("1");
-
-        object b = null;
-        subDeserializer.ContinueDeserialization(typeof(object), data.GetChild("1").GetChild("2"), ref b);
-        B = b;
-      }
-    }
-
     [Test]
     public void NanoSerializable()
     {
@@ -1110,13 +890,6 @@ namespace BrokenEvent.NanoSerializer.Tests
       Assert.AreEqual(((ThreeAttrsTestClass)a.B).A, ((ThreeAttrsTestClass)b.B).A);
       Assert.AreEqual(((ThreeAttrsTestClass)a.B).B, ((ThreeAttrsTestClass)b.B).B);
       Assert.AreEqual(((ThreeAttrsTestClass)a.B).C, ((ThreeAttrsTestClass)b.B).C);
-    }
-
-    private class PrimitiveArrayClass
-    {
-      public int[] Ints;
-      public float[] Floats;
-      public int[,] Ints2;
     }
 
     [Test]
@@ -1148,11 +921,6 @@ namespace BrokenEvent.NanoSerializer.Tests
           Assert.AreEqual(a.Ints2[x, y], b.Ints2[x, y]);
     }
 
-    private class PrimitiveListClass
-    {
-      public List<int> Ints { get; } = new List<int>();
-    }
-
     [Test]
     public void PrimitiveList()
     {
@@ -1181,34 +949,6 @@ namespace BrokenEvent.NanoSerializer.Tests
         Assert.AreEqual(a.Ints[i], c.Ints[i]);
     }
 
-    private class CustomSerializationClass
-    {
-      public CustomSerializationClass(string a)
-      {
-        A = a;
-      }
-      public string A { get; }
-      public NanoState B { get; set; }
-    }
-
-    private class CustomSerializerClass: INanoSerializer
-    {
-      public void SerializeObject(object target, IDataAdapter data, ISubSerializer subSerializer)
-      {
-        CustomSerializationClass obj = (CustomSerializationClass)target;
-        data.AddAttribute("someData", obj.A);
-        data.AddAttribute("someOtherData", obj.B.ToString());
-      }
-
-      public object DeserializeObject(IDataAdapter data, ISubDeserializer subDeserializer)
-      {
-        string a = data.GetAttribute("someData");
-        CustomSerializationClass obj = new CustomSerializationClass(a);
-        obj.B = (NanoState)Enum.Parse(typeof(NanoState), data.GetAttribute("someOtherData"));
-        return obj;
-      }
-    }
-
     [Test]
     public void CustomSerialization()
     {
@@ -1226,14 +966,6 @@ namespace BrokenEvent.NanoSerializer.Tests
 
       Assert.AreEqual(a.A, b.A);
       Assert.AreEqual(a.B, b.B);
-    }
-
-    private class ThreeAttrsTestClass2
-    {
-      [NanoSerialization(Name = "A_")]
-      public int A;
-      public string B { get; set; }
-      public NanoState C { get; set; }
     }
 
     [Test]

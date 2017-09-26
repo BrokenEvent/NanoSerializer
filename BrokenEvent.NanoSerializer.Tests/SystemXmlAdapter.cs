@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Xml;
 
+using BrokenEvent.NanoSerializer.Adapter;
+
 namespace BrokenEvent.NanoSerializer.Tests
 {
-  public class SystemXmlAdapter: IDataAdapter
+  public class SystemXmlAdapter: IDataAdapter, IDataArray
   {
     private readonly XmlElement element;
 
@@ -26,6 +28,16 @@ namespace BrokenEvent.NanoSerializer.Tests
     {
       get { return element.InnerText; }
       set { element.InnerText = value; }
+    }
+
+    public void AddValue(string value)
+    {
+      element.InnerText = value;
+    }
+
+    public string GetValue()
+    {
+      return element.InnerText;
     }
 
     public string GetSystemAttribute(string name)
@@ -79,6 +91,21 @@ namespace BrokenEvent.NanoSerializer.Tests
     public static implicit operator SystemXmlAdapter(XmlElement e)
     {
       return new SystemXmlAdapter(e);
+    }
+
+    public IDataArray AddArray()
+    {
+      return this;
+    }
+
+    public IDataArray GetArray()
+    {
+      return this;
+    }
+
+    public IDataAdapter AddArrayValue()
+    {
+      return AddChild("Item");
     }
 
     public static implicit operator SystemXmlAdapter(XmlDocument e)

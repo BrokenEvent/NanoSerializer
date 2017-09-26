@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
+using BrokenEvent.NanoSerializer.Adapter;
 using BrokenEvent.NanoSerializer.Caching;
 
 namespace BrokenEvent.NanoSerializer
@@ -144,6 +145,13 @@ namespace BrokenEvent.NanoSerializer
         object value = property.GetValue(target);
         if (value != null)
           SerializeValue(property.MemberType, value, data, new Info(property), isReadOnly);
+        else if (settings.SerializeNull)
+        {
+          if (property.Location == NanoLocation.SubNode)
+            data.AddChild(property.Name, null);
+          else
+            data.AddAttribute(property.Name, null);
+        }
       }
 
       for (int i = 0; i < wrapper.Fields.Count; i++)
@@ -159,39 +167,28 @@ namespace BrokenEvent.NanoSerializer
         else if (settings.SerializeNull)
         {
           if (field.Location == NanoLocation.SubNode)
-            data.AddChild(field.Info.Name, null);
+            data.AddChild(field.Name, null);
           else
-            data.AddAttribute(field.Info.Name, null);
+            data.AddAttribute(field.Name, null);
         }
       }
     }
 
     private void SerializeValue(Type type, object value, IDataAdapter data, Info info, bool isReadOnly)
     {
-      if (info.Category == TypeCategory.Primitive)
+      if (info.Category == TypeCategory.Primitive ||
+          info.Category == TypeCategory.Enum)
       {
         // no need to serialize
         if (isReadOnly)
           return;
 
-        if (info.Location == NanoLocation.SubNode)
-          data.AddChild(info.Name, value.ToString());
-        else
-          data.AddAttribute(info.Name, value.ToString());
-
-        return;
-      }
-
-      if (info.Category == TypeCategory.Enum)
-      {
-        // no need to serialize
-        if (isReadOnly)
-          return;
+        string stringValue = info.Category == TypeCategory.Primitive ? value.ToString() : SerializeEnum(value);
 
         if (info.Location == NanoLocation.SubNode)
-          data.AddChild(info.Name, SerializeEnum(value));
+          data.AddChild(info.Name, stringValue);
         else
-          data.AddAttribute(info.Name, SerializeEnum(value));
+          data.AddAttribute(info.Name, stringValue);
 
         return;
       }
@@ -228,10 +225,10 @@ namespace BrokenEvent.NanoSerializer
       switch (category)
       {
         case TypeCategory.Primitive:
-          data.Value = value.ToString();
+          data.AddValue(value.ToString());
           break;
         case TypeCategory.Enum:
-          data.Value = SerializeEnum(value);
+          data.AddValue(SerializeEnum(value));
           break;
         case TypeCategory.Unknown:
           SerializeValue(data, value);
@@ -270,19 +267,19 @@ namespace BrokenEvent.NanoSerializer
           writer(buffer, index, o);
           index += size;
         }
-        data.Value = Convert.ToBase64String(buffer);
+        data.AddValue(Convert.ToBase64String(buffer));
       }
       else
       {
-        Info info = new Info(settings.ContainerItemName, NanoLocation.SubNode, elementType);
+        IDataArray array = data.AddArray();
         foreach (object o in e)
-          SerializeValue(elementType, o, data, info, false);
+          SerializeSubValue(elementType, o, array.AddArrayValue(), null);
       }
 
       haveContainers = true;
     }
 
-    private void SerializeArrayRank(Array array, Type elementType, int[] coords, int r, IDataAdapter data, Info info)
+    private void SerializeArrayRank(Array array, Type elementType, int[] coords, int r, IDataAdapter data)
     {
       if (r == coords.Length - 1)
       {
@@ -300,21 +297,27 @@ namespace BrokenEvent.NanoSerializer
             writer(buffer, index, array.GetValue(coords));
             index += size;
           }
-          data.Value = Convert.ToBase64String(buffer);
+          data.AddValue(Convert.ToBase64String(buffer));
         }
         else
+        {
+          IDataArray a = data.AddArray();
           for (int i = 0; i < array.GetLength(r); i++)
           {
             coords[r] = i;
-            SerializeValue(elementType, array.GetValue(coords), data, info, false);
+            SerializeSubValue(elementType, array.GetValue(coords), a.AddArrayValue(), null);
           }
+        }
       }
       else
+      {
+        IDataArray a = data.AddArray();
         for (int i = 0; i < array.GetLength(r); i++)
         {
           coords[r] = i;
-          SerializeArrayRank(array, elementType, coords, r + 1, data.AddChild(settings.ArrayItemName), info);
+          SerializeArrayRank(array, elementType, coords, r + 1, a.AddArrayValue());
         }
+      }
     }
 
     private void SerializeContainer(object value, IDataAdapter data, TypeCategory category, Type[] genericArgs)
@@ -326,10 +329,9 @@ namespace BrokenEvent.NanoSerializer
       {
         Array array = (Array)value;
         Type elementType = type.GetElementType();
-        Info localInfo = new Info(settings.ArrayItemName, NanoLocation.SubNode, elementType);
         int[] coords = new int[array.Rank];
-        SerializeArrayRank(array, elementType, coords, 0, data, localInfo);
         data.AddSystemAttribute(ATTRIBUTE_ARRAY_RANK, array.Rank.ToString());
+        SerializeArrayRank(array, elementType, coords, 0, data);
 
         haveContainers = true;
         return;
@@ -340,11 +342,11 @@ namespace BrokenEvent.NanoSerializer
       {
         Type keyType = genericArgs[0];
         Type valueType = genericArgs[1];
-        Info keyInfo = new Info(settings.DictionaryKeyName, NanoLocation.SubNode, genericArgs[0]);
-        Info valueInfo = new Info(settings.DictionaryValueName, NanoLocation.SubNode, genericArgs[1]);
 
         Func<object, object> getKeyFunc = null;
         Func<object, object> getValueFunc = null;
+
+        IDataArray array = data.AddArray();
 
         foreach (object o in (IEnumerable)value)
         {
@@ -363,9 +365,10 @@ namespace BrokenEvent.NanoSerializer
             }
           }
 
-          IDataAdapter itemEl = data.AddChild(settings.ContainerItemName);
-          SerializeValue(keyType, getKeyFunc(o), itemEl, keyInfo, false);
-          SerializeValue(valueType, getValueFunc(o), itemEl, valueInfo, false);
+
+          IDataAdapter itemEl = array.AddArrayValue();
+          SerializeSubValue(keyType, getKeyFunc(o), itemEl.AddChild(settings.DictionaryKeyName), null);
+          SerializeSubValue(valueType, getValueFunc(o), itemEl.AddChild(settings.DictionaryValueName), null);
         }
         haveContainers = true;
 

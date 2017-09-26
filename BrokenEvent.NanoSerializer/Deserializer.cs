@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
+using BrokenEvent.NanoSerializer.Adapter;
 using BrokenEvent.NanoSerializer.Caching;
 
 namespace BrokenEvent.NanoSerializer
@@ -169,7 +170,7 @@ namespace BrokenEvent.NanoSerializer
 
       // primitive type?
       if (IsPrimitive(type))
-        return DeserializePrimitive(type, data.Value);
+        return DeserializePrimitive(type, data.GetValue());
 
       if ((flags & OptimizationFlags.NoContainers) == 0)
       {
@@ -335,7 +336,7 @@ namespace BrokenEvent.NanoSerializer
         return data.GetAttribute(name);
 
       IDataAdapter e = data.GetChild(name);
-      return e?.Value;
+      return e?.GetValue();
     }
 
     private void DeserializeContainer(ref object container, Type type, Type elementType, IDataAdapter data, string addMethodName, bool reverse = false)
@@ -352,7 +353,7 @@ namespace BrokenEvent.NanoSerializer
 
       if (elementType.IsPrimitive)
       {
-        byte[] buffer = Convert.FromBase64String(data.Value);
+        byte[] buffer = Convert.FromBase64String(data.GetValue());
         int size = ByteUtils.GetSizeOf(elementType);
         int count = buffer.Length / size;
         Func<byte[], int, object> reader = ByteUtils.GetBinaryReader(elementType);
@@ -363,13 +364,16 @@ namespace BrokenEvent.NanoSerializer
         else
           for (int i = 0; i < count; i++)
             addAction(container, reader(buffer, size * i));
+
+        return;
       }
 
+      IDataArray array = data.GetArray();
       if (reverse)
-        foreach (IDataAdapter element in data.GetChildrenReversed())
+        foreach (IDataAdapter element in array.GetChildrenReversed())
           addAction(container, DeserializeObject(elementType, element, null));
       else
-        foreach (IDataAdapter element in data.GetChildren())
+        foreach (IDataAdapter element in array.GetChildren())
           addAction(container, DeserializeObject(elementType, element, null));
     }
 
@@ -385,7 +389,7 @@ namespace BrokenEvent.NanoSerializer
         TypeCache.AddTypeAccessor(type, addFunc);
       }
 
-      foreach (IDataAdapter element in data.GetChildren())
+      foreach (IDataAdapter element in data.GetArray().GetChildren())
         addFunc(container, DeserializeObject(elementType, element, null));
     }
 
@@ -395,7 +399,7 @@ namespace BrokenEvent.NanoSerializer
       {
         if (elementType.IsPrimitive)
         {
-          byte[] buffer = Convert.FromBase64String(data.Value);
+          byte[] buffer = Convert.FromBase64String(data.GetValue());
           int size = ByteUtils.GetSizeOf(elementType);
           int count = array.GetLength(r);
           Func<byte[], int, object> reader = ByteUtils.GetBinaryReader(elementType);
@@ -409,7 +413,7 @@ namespace BrokenEvent.NanoSerializer
         else
         {
           int index = 0;
-          foreach (IDataAdapter element in data.GetChildren())
+          foreach (IDataAdapter element in data.GetArray().GetChildren())
           {
             coords[r] = index++;
             array.SetValue(DeserializeObject(elementType, element, null), coords);
@@ -419,7 +423,7 @@ namespace BrokenEvent.NanoSerializer
       else
       {
         int index = 0;
-        foreach (IDataAdapter element in data.GetChildren())
+        foreach (IDataAdapter element in data.GetArray().GetChildren())
         {
           coords[r] = index++;
           DeserializeArrayRank(array, elementType, coords, r + 1, element);
@@ -431,14 +435,14 @@ namespace BrokenEvent.NanoSerializer
     {
       if (index == lengths.Length - 1 && elementType.IsPrimitive)
       {
-        string value = data.Value;
+        string value = data.GetValue();
         lengths[index] = ByteUtils.GetBytesInBase64(value) / ByteUtils.GetSizeOf(elementType);
         return;
       }
 
       int count = 0;
       IDataAdapter firstChild = null;
-      foreach (IDataAdapter e in data.GetChildren())
+      foreach (IDataAdapter e in data.GetArray().GetChildren())
       {
         if (firstChild == null)
           firstChild = e;
@@ -526,7 +530,7 @@ namespace BrokenEvent.NanoSerializer
           TypeCache.AddTypeAccessor(type, setAction);
         }
 
-        foreach (IDataAdapter element in data.GetChildren())
+        foreach (IDataAdapter element in data.GetArray().GetChildren())
           setAction(
               target,
               DeserializeObject(genericArgs[0], element.GetChild("Key"), null),

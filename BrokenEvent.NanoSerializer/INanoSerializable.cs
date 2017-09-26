@@ -1,4 +1,6 @@
-﻿namespace BrokenEvent.NanoSerializer
+﻿using BrokenEvent.NanoSerializer.Adapter;
+
+namespace BrokenEvent.NanoSerializer
 {
   /// <summary>
   /// Class that can serialize and deserialize by itself in its own way.

@@ -45,7 +45,37 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ByteUtilsTest.cs" />
+    <Compile Include="JsonTest.cs" />
+    <Compile Include="Mocks\ArrayClass.cs" />
+    <Compile Include="Mocks\ComplexTestClass.cs" />
+    <Compile Include="Mocks\CustomConstructorArgClass.cs" />
+    <Compile Include="Mocks\CustomSerializationClass.cs" />
+    <Compile Include="Mocks\CustomSerializerClass.cs" />
+    <Compile Include="Mocks\DictionaryClass.cs" />
+    <Compile Include="Mocks\IListClass.cs" />
+    <Compile Include="Mocks\LinkedListClass.cs" />
+    <Compile Include="Mocks\CustomConstructorTestClass.cs" />
+    <Compile Include="Mocks\NanoSerializableClass.cs" />
+    <Compile Include="Mocks\NonGenericQueueClass.cs" />
+    <Compile Include="Mocks\NonGenericStackClass.cs" />
+    <Compile Include="Mocks\PolymorphismTestClass.cs" />
+    <Compile Include="Mocks\PrimitiveArrayClass.cs" />
+    <Compile Include="Mocks\PrimitiveListClass.cs" />
+    <Compile Include="Mocks\QueueClass.cs" />
+    <Compile Include="Mocks\ReadOnlyListClass.cs" />
+    <Compile Include="Mocks\SerializeSetClass.cs" />
+    <Compile Include="Mocks\SetClass.cs" />
+    <Compile Include="Mocks\SquareArrayClass.cs" />
+    <Compile Include="Mocks\StackClass.cs" />
+    <Compile Include="Mocks\StringArrayClass.cs" />
+    <Compile Include="Mocks\ThreeAttrsTestClass.cs" />
+    <Compile Include="Mocks\ThreeAttrsTestClass2.cs" />
+    <Compile Include="Mocks\ThreeAttrsTestStruct.cs" />
+    <Compile Include="Mocks\ThreeAttrsTestStructCtor.cs" />
+    <Compile Include="Mocks\ThreeSubnodesTestClass.cs" />
+    <Compile Include="Mocks\TriangleArrayClass.cs" />
     <Compile Include="ModelClass.cs" />
+    <Compile Include="NewtonsoftJsonAdapter.cs" />
     <Compile Include="PerfTest.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

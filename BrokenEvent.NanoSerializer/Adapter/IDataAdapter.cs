@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
-
-namespace BrokenEvent.NanoSerializer
+﻿
+namespace BrokenEvent.NanoSerializer.Adapter
 {
   /// <summary>
   /// Data abstraction for <see cref="Serializer"/> and <see cref="Deserializer"/>.
   /// </summary>
-  public interface IDataAdapter
+  public interface IDataAdapter: IBaseData
   {
     /// <summary>
     /// Add a system attribute for internal serializer data. Should add subelement if attributes are unavailable.
@@ -25,13 +24,12 @@ namespace BrokenEvent.NanoSerializer
     /// for serializer helper data. Adapter may implement different mechanisms to avoid name collisions with system data.</remarks>
     void AddAttribute(string name, string value);
 
-    /// <summary>
-    /// Gets or sets text value of this data element.
-    /// </summary>
-    string Value { get; set; }
+    void AddValue(string value);
+
+    string GetValue();
 
     /// <summary>
-    /// Gets the system attribute (saved with <see cref="AddSystemAttribute"/>) value by name. Should return subelemebt if attributes are unavailable.
+    /// Gets the system attribute (saved with <see cref="AddSystemAttribute"/>) value by name. Should return subelement if attributes are unavailable.
     /// </summary>
     /// <param name="name">Name of the attribute to get</param>
     /// <returns>Text value of the attribute or subelement. Null if no attribute with this name found</returns>
@@ -62,23 +60,15 @@ namespace BrokenEvent.NanoSerializer
     /// <returns>The added subelement.</returns>
     IDataAdapter AddChild(string name);
 
+    IDataArray AddArray();
+
+    IDataArray GetArray();
+
     /// <summary>
     /// Adds child element by name and value.
     /// </summary>
     /// <param name="name">Name of the element to add</param>
     /// <param name="value">Value of the element. Can be null if <see cref="SerializationSettings.SerializeNull"/> is set</param>
     void AddChild(string name, string value);
-
-    /// <summary>
-    /// Gets the children elements enumeration in straight (as stored) order.
-    /// </summary>
-    /// <returns>Child elements enumeration</returns>
-    IEnumerable<IDataAdapter> GetChildren();
-
-    /// <summary>
-    /// Gets the children elements enumeration in reversed (relative to stored order) order.
-    /// </summary>
-    /// <returns>Child elements reversed enumeration</returns>
-    IEnumerable<IDataAdapter> GetChildrenReversed();
   }
 }
