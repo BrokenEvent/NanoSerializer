@@ -146,8 +146,8 @@ namespace BrokenEvent.NanoSerializer.Tests
     [STAThread]
     static void Main()
     {
-      PerfTest.TestPerformance();
-      Console.ReadLine();
+      /*PerfTest.TestPerformance();
+      Console.ReadLine();*/
 
       WriteWarmUp("Model");
       ModelClass target = ModelClass.BuildObjectsModel(5, 3);

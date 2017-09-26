@@ -358,14 +358,14 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       XmlElement aEl = GetElement(target, "A");
       Assert.NotNull(aEl);
 
       Assert.AreEqual(1, aEl.Attributes.Count);
       Assert.AreEqual(1, aEl.ChildNodes.Count);
-      Assert.AreEqual("System.String", aEl.GetAttribute(SerializationBase.ATTRIBUTE_TYPE));
+      Assert.AreEqual("1", aEl.GetAttribute(SerializationBase.ATTRIBUTE_TYPE));
       Assert.AreEqual("test", aEl.InnerText);
 
       PolymorphismTestClass b = Deserializer.Deserialize<PolymorphismTestClass>((SystemXmlAdapter)target);
@@ -384,7 +384,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       XmlElement aEl = GetElement(target, "A");
       Assert.NotNull(aEl);
@@ -413,7 +413,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       XmlElement aEl = GetElement(target, "A");
       Assert.NotNull(aEl);
@@ -444,7 +444,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(3, target.DocumentElement.ChildNodes.Count);
 
       XmlElement aEl = GetElement(target, "A");
       Assert.NotNull(aEl);
@@ -538,7 +538,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       IListClass b = Deserializer.Deserialize<IListClass>((SystemXmlAdapter)target);
 
@@ -556,7 +556,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       ReadOnlyListClass b = Deserializer.Deserialize<ReadOnlyListClass>((SystemXmlAdapter)target);
 
@@ -655,7 +655,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       NonGenericQueueClass b = Deserializer.Deserialize<NonGenericQueueClass>((SystemXmlAdapter)target);
 
@@ -717,7 +717,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       NonGenericStackClass b = Deserializer.Deserialize<NonGenericStackClass>((SystemXmlAdapter)target);
 
@@ -745,7 +745,7 @@ namespace BrokenEvent.NanoSerializer.Tests
       XmlDocument target = new XmlDocument();
       Serializer.Serialize((SystemXmlAdapter)target, a);
 
-      Assert.AreEqual(1, target.DocumentElement.ChildNodes.Count);
+      Assert.AreEqual(2, target.DocumentElement.ChildNodes.Count);
 
       SetClass b = Deserializer.Deserialize<SetClass>((SystemXmlAdapter)target);
 

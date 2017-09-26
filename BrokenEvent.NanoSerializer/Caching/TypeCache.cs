@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace BrokenEvent.NanoSerializer.Caching
 {
@@ -13,6 +14,7 @@ namespace BrokenEvent.NanoSerializer.Caching
     private static Dictionary<Type, Type[]> typeInterfaces = new Dictionary<Type, Type[]>();
     private static Dictionary<Type, Type[]> typeGenericArgs = new Dictionary<Type, Type[]>();
     private static Dictionary<Type, Func<object>> typeConstructors = new Dictionary<Type, Func<object>>();
+    private static Dictionary<Type, TypeCategory> typeCategories = new Dictionary<Type, TypeCategory>();
 
     public static TypeWrapper GetWrapper(Type type)
     {
@@ -33,7 +35,29 @@ namespace BrokenEvent.NanoSerializer.Caching
         if (typeAssemblyNames.TryGetValue(type, out result))
           return result;
 
-        result = type.Assembly.GetName().Name == "mscorlib" ? type.FullName : type.AssemblyQualifiedName;
+        if (type.Assembly.GetName().Name == "mscorlib")
+        {
+          StringBuilder sb = new StringBuilder(type.Namespace);
+          sb.Append(".").Append(type.Name);
+          Type[] genericParameters = type.GetGenericArguments();
+          if (genericParameters.Length > 0)
+          {
+            sb.Append("[[");
+            for (int i = 0; i < genericParameters.Length; i++)
+            {
+              sb.Append(GetTypeFullName(genericParameters[i], true));
+              if (i > 0)
+                sb.Append(", ");
+            }
+
+            sb.Append("]]");
+          }
+
+          result = sb.ToString();
+        }
+        else
+          result = type.AssemblyQualifiedName;
+
         typeAssemblyNames.Add(type, result);
         return result;
       }
@@ -126,6 +150,16 @@ namespace BrokenEvent.NanoSerializer.Caching
       }
 
       return func();
+    }
+
+    public static bool TryGetCategory(Type type, out TypeCategory category)
+    {
+      return typeCategories.TryGetValue(type, out category);
+    }
+
+    public static void AddTypeCategory(Type type, TypeCategory category)
+    {
+      typeCategories.Add(type, category);
     }
   }
 }

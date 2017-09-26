@@ -43,6 +43,15 @@ namespace BrokenEvent.NanoSerializer
       objectCache.Clear();
       flags = (OptimizationFlags)data.GetIntValue(ATTRIBUTE_FLAGS, true);
 
+      IDataAdapter types = data.GetChild(ELEMENT_TYPES);
+      if (types != null)
+      {
+        IDataArray array = types.GetArray();
+        int index = 1;
+        foreach (IDataAdapter child in array.GetChildren())
+          typeCache.Add(index++, InternalResolveTypes(child.GetStringValue()));
+      }
+      
       return (T)DeserializeObject(typeof(T), data, null);
     }
 
@@ -63,6 +72,7 @@ namespace BrokenEvent.NanoSerializer
     }
 
     private Dictionary<int, object> objectCache = new Dictionary<int, object>();
+    private Dictionary<int, Type> typeCache = new Dictionary<int, Type>();
     private Dictionary<string, object> constructorArgs = new Dictionary<string, object>();
     private int maxObjId = 1;
     private OptimizationFlags flags;
@@ -157,13 +167,10 @@ namespace BrokenEvent.NanoSerializer
       }
 
       // fix type, if needed
-      string typeName = data.GetStringValue(ATTRIBUTE_TYPE, true);
-      if (typeName != null)
-      {
-        type = InternalResolveTypes(typeName);
-        if (type == null)
-          throw new SerializationException($"Unable to find type {typeName}");
-      }
+      int typeId = (int)data.GetIntValue(ATTRIBUTE_TYPE, true);
+      if (typeId > 0)
+        if (!typeCache.TryGetValue(typeId, out type))
+          throw new SerializationException($"Unable to find type {typeId}");
 
       // primitive type?
       if (IsPrimitive(type))

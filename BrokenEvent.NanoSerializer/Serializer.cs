@@ -54,6 +54,7 @@ namespace BrokenEvent.NanoSerializer
 
     private Dictionary<object, int> objectsCache = new Dictionary<object, int>();
     private int maxObjId = 1;
+    private Dictionary<Type, int> typesCache = new Dictionary<Type, int>();
     private bool haveContainers = false;
     private bool haveReferences = false;
     private bool havePrivateProperties = false;
@@ -111,6 +112,13 @@ namespace BrokenEvent.NanoSerializer
 
       if (flags != 0)
         data.AddIntValue((long)flags, ATTRIBUTE_FLAGS, true);
+
+      if (typesCache.Count > 0)
+      {
+        IDataArray array = data.AddChild(ELEMENT_TYPES).AddArray();
+        foreach (KeyValuePair<Type, int> pair in typesCache)
+          array.AddArrayValue().SetStringValue(TypeCache.GetTypeFullName(pair.Key, settings.AssemblyQualifiedNames));
+      }
     }
 
     private void SerializeValue(IDataAdapter data, object target)
@@ -125,8 +133,7 @@ namespace BrokenEvent.NanoSerializer
       {
         PropertyWrapper property = wrapper.Properties[i];
 
-        if ((!property.CanRead || property.Info.GetMethod.IsPrivate) && 
-            (!property.CanWrite || property.Info.SetMethod.IsPrivate))
+        if (property.IsPrivate)
         {
           if (!settings.SerializePrivateProperties)
             continue;
@@ -208,8 +215,12 @@ namespace BrokenEvent.NanoSerializer
       Type targetType = value.GetType();
       if (targetType != type)
       {
+        int typeId;
+        if (!typesCache.TryGetValue(targetType, out typeId))
+          typesCache.Add(targetType, typeId = typesCache.Count + 1);
+
         if (settings.EnableTypeMarkers)
-          data.AddStringValue(TypeCache.GetTypeFullName(targetType, settings.AssemblyQualifiedNames), ATTRIBUTE_TYPE, true);
+          data.AddIntValue(typeId, ATTRIBUTE_TYPE, true);
         type = targetType;
         genericArgs = type.GetGenericArguments();
       }

@@ -10,6 +10,7 @@ namespace BrokenEvent.NanoSerializer.Caching
     private readonly Action<object, object> writeAction;
     public readonly bool CanWrite;
     public readonly bool CanRead;
+    public readonly bool IsPrivate;
 
     public PropertyWrapper(Type ownerType, PropertyInfo info, NanoLocation location, NanoState state, int constructorArg, string name)
       : base(ownerType, info, info.PropertyType, location, state, constructorArg, name)
@@ -22,6 +23,9 @@ namespace BrokenEvent.NanoSerializer.Caching
 
       CanWrite = info.CanWrite;
       CanRead = info.CanRead;
+
+      IsPrivate = (!info.CanRead || info.GetMethod.IsPrivate) &&
+                  (!info.CanWrite || info.SetMethod.IsPrivate);
     }
 
     public override object GetValue(object target)

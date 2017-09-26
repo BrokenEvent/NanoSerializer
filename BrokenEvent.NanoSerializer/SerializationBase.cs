@@ -18,6 +18,7 @@ namespace BrokenEvent.NanoSerializer
     public const string ATTRIBUTE_OBJID = "_objId";
     public const string ATTRIBUTE_FLAGS = "_flags";
     public const string ATTRIBUTE_ARRAY_RANK = "_r";
+    public const string ELEMENT_TYPES = "_types";
 
     // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/built-in-types-table
     private static Dictionary<Type, Action<object, IDataAdapter, string, bool>> primitiveSerializers = new Dictionary<Type, Action<object, IDataAdapter, string, bool>>
@@ -166,6 +167,17 @@ namespace BrokenEvent.NanoSerializer
     }
 
     internal static TypeCategory GetTypeCategory(Type type)
+    {
+      TypeCategory category;
+      if (TypeCache.TryGetCategory(type, out category))
+        return category;
+
+      category = GetTypeCategoryDetect(type);
+      TypeCache.AddTypeCategory(type, category);
+      return category;
+    }
+
+    internal static TypeCategory GetTypeCategoryDetect(Type type)
     {
       if (type.IsEnum)
         return TypeCategory.Enum;
